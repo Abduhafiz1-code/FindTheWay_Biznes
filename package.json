@@ -1,0 +1,25 @@
+{
+  "name": "findtheway-biznes",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "pinia": "^2.2.6",
+    "vue": "^3.5.39",
+    "vue-router": "^4.4.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "daisyui": "^5.7.0",
+    "playwright": "^1.62.0",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.1.1"
+  }
+}

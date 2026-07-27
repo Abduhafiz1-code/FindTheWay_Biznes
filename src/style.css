@@ -1,0 +1,341 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: false;
+  logs: false;
+}
+
+@plugin "daisyui/theme" {
+  name: "ftw-dark";
+  default: true;
+  color-scheme: dark;
+  --color-base-100: oklch(22.53% 0.0500 262.93);
+  --color-base-200: oklch(27.10% 0.0730 266.40);
+  --color-base-300: oklch(34.10% 0.0691 268.32);
+  --color-base-content: oklch(95.85% 0.0098 87.47);
+  --color-primary: oklch(78.37% 0.1587 72.99);
+  --color-primary-content: oklch(18.89% 0.0260 77.50);
+  --color-secondary: oklch(74.29% 0.0929 184.71);
+  --color-secondary-content: oklch(23.35% 0.0349 185.57);
+  --color-accent: oklch(67.68% 0.1595 274.97);
+  --color-accent-content: oklch(18.60% 0.0622 272.03);
+  --color-neutral: oklch(27.10% 0.0730 266.40);
+  --color-neutral-content: oklch(95.85% 0.0098 87.47);
+  --color-info: oklch(74.29% 0.0929 184.71);
+  --color-info-content: oklch(23.35% 0.0349 185.57);
+  --color-success: oklch(68.73% 0.1792 138.02);
+  --color-success-content: oklch(22.10% 0.0529 145.05);
+  --color-warning: oklch(78.37% 0.1587 72.99);
+  --color-warning-content: oklch(18.89% 0.0260 77.50);
+  --color-error: oklch(62.34% 0.1877 24.72);
+  --color-error-content: oklch(19.61% 0.0574 27.72);
+  --radius-selector: 0.75rem;
+  --radius-field: 0.625rem;
+  --radius-box: 1.25rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: "ftw-light";
+  color-scheme: light;
+  --color-base-100: oklch(100.00% 0.0000 89.88);
+  --color-base-200: oklch(96.78% 0.0086 84.57);
+  --color-base-300: oklch(90.23% 0.0203 84.59);
+  --color-base-content: oklch(26.20% 0.0399 265.23);
+  --color-primary: oklch(65.78% 0.1411 69.17);
+  --color-primary-content: oklch(100.00% 0.0000 89.88);
+  --color-secondary: oklch(57.82% 0.0958 182.01);
+  --color-secondary-content: oklch(100.00% 0.0000 89.88);
+  --color-accent: oklch(50.82% 0.1773 271.46);
+  --color-accent-content: oklch(100.00% 0.0000 89.88);
+  --color-neutral: oklch(26.20% 0.0399 265.23);
+  --color-neutral-content: oklch(96.78% 0.0086 84.57);
+  --color-info: oklch(57.82% 0.0958 182.01);
+  --color-info-content: oklch(100.00% 0.0000 89.88);
+  --color-success: oklch(56.23% 0.1613 138.78);
+  --color-success-content: oklch(100.00% 0.0000 89.88);
+  --color-warning: oklch(61.90% 0.1340 70.14);
+  --color-warning-content: oklch(100.00% 0.0000 89.88);
+  --color-error: oklch(54.72% 0.1804 26.11);
+  --color-error-content: oklch(100.00% 0.0000 89.88);
+  --radius-selector: 0.75rem;
+  --radius-field: 0.625rem;
+  --radius-box: 1.25rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: "ftw-ocean";
+  color-scheme: dark;
+  --color-base-100: oklch(21.18% 0.0421 247.84);
+  --color-base-200: oklch(26.63% 0.0571 249.36);
+  --color-base-300: oklch(34.89% 0.0692 246.27);
+  --color-base-content: oklch(95.68% 0.0175 234.50);
+  --color-primary: oklch(79.71% 0.1339 211.53);
+  --color-primary-content: oklch(23.48% 0.0388 221.59);
+  --color-secondary: oklch(62.31% 0.1880 259.81);
+  --color-secondary-content: oklch(97.32% 0.0131 251.56);
+  --color-accent: oklch(70.90% 0.1592 293.54);
+  --color-accent-content: oklch(20.76% 0.0614 296.53);
+  --color-neutral: oklch(26.63% 0.0571 249.36);
+  --color-neutral-content: oklch(95.68% 0.0175 234.50);
+  --color-info: oklch(75.35% 0.1390 232.66);
+  --color-info-content: oklch(24.64% 0.0474 234.89);
+  --color-success: oklch(77.29% 0.1535 163.22);
+  --color-success-content: oklch(25.85% 0.0483 169.99);
+  --color-warning: oklch(83.69% 0.1644 84.43);
+  --color-warning-content: oklch(23.96% 0.0468 78.61);
+  --color-error: oklch(71.92% 0.1690 13.43);
+  --color-error-content: oklch(20.44% 0.0659 8.33);
+  --radius-selector: 0.75rem;
+  --radius-field: 0.625rem;
+  --radius-box: 1.25rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: "ftw-forest";
+  color-scheme: dark;
+  --color-base-100: oklch(21.79% 0.0350 158.68);
+  --color-base-200: oklch(26.62% 0.0445 157.90);
+  --color-base-300: oklch(35.18% 0.0557 162.08);
+  --color-base-content: oklch(95.80% 0.0182 155.81);
+  --color-primary: oklch(80.03% 0.1821 151.71);
+  --color-primary-content: oklch(26.59% 0.0652 151.17);
+  --color-secondary: oklch(84.93% 0.2073 128.85);
+  --color-secondary-content: oklch(27.41% 0.0688 132.11);
+  --color-accent: oklch(70.38% 0.1230 182.50);
+  --color-accent-content: oklch(27.52% 0.0466 183.47);
+  --color-neutral: oklch(26.62% 0.0445 157.90);
+  --color-neutral-content: oklch(95.80% 0.0182 155.81);
+  --color-info: oklch(75.35% 0.1390 232.66);
+  --color-info-content: oklch(24.64% 0.0474 234.89);
+  --color-success: oklch(80.03% 0.1821 151.71);
+  --color-success-content: oklch(26.59% 0.0652 151.17);
+  --color-warning: oklch(86.06% 0.1731 91.94);
+  --color-warning-content: oklch(25.26% 0.0489 91.00);
+  --color-error: oklch(71.06% 0.1661 22.22);
+  --color-error-content: oklch(20.51% 0.0624 24.50);
+  --radius-selector: 0.75rem;
+  --radius-field: 0.625rem;
+  --radius-box: 1.25rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: "ftw-violet";
+  color-scheme: dark;
+  --color-base-100: oklch(17.61% 0.0468 299.66);
+  --color-base-200: oklch(21.59% 0.0648 298.46);
+  --color-base-300: oklch(29.41% 0.0959 297.82);
+  --color-base-content: oklch(95.03% 0.0295 305.12);
+  --color-primary: oklch(72.17% 0.1767 305.50);
+  --color-primary-content: oklch(22.14% 0.0918 302.66);
+  --color-secondary: oklch(72.53% 0.1752 349.76);
+  --color-secondary-content: oklch(24.00% 0.0847 353.90);
+  --color-accent: oklch(75.35% 0.1390 232.66);
+  --color-accent-content: oklch(28.60% 0.0529 228.63);
+  --color-neutral: oklch(21.59% 0.0648 298.46);
+  --color-neutral-content: oklch(95.03% 0.0295 305.12);
+  --color-info: oklch(75.35% 0.1390 232.66);
+  --color-info-content: oklch(28.60% 0.0529 228.63);
+  --color-success: oklch(80.03% 0.1821 151.71);
+  --color-success-content: oklch(26.59% 0.0652 151.17);
+  --color-warning: oklch(83.69% 0.1644 84.43);
+  --color-warning-content: oklch(23.96% 0.0468 78.61);
+  --color-error: oklch(71.92% 0.1690 13.43);
+  --color-error-content: oklch(20.44% 0.0659 8.33);
+  --radius-selector: 0.75rem;
+  --radius-field: 0.625rem;
+  --radius-box: 1.25rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: "ftw-sand";
+  color-scheme: light;
+  --color-base-100: oklch(99.42% 0.0069 88.64);
+  --color-base-200: oklch(95.41% 0.0188 83.06);
+  --color-base-300: oklch(88.33% 0.0352 82.90);
+  --color-base-content: oklch(25.56% 0.0273 73.40);
+  --color-primary: oklch(55.53% 0.1455 49.00);
+  --color-primary-content: oklch(98.21% 0.0141 74.43);
+  --color-secondary: oklch(51.09% 0.0861 186.39);
+  --color-secondary-content: oklch(98.04% 0.0186 180.29);
+  --color-accent: oklch(49.07% 0.2412 292.58);
+  --color-accent-content: oklch(96.33% 0.0206 301.15);
+  --color-neutral: oklch(25.56% 0.0273 73.40);
+  --color-neutral-content: oklch(95.41% 0.0188 83.06);
+  --color-info: oklch(51.98% 0.0936 223.13);
+  --color-info-content: oklch(98.10% 0.0128 221.42);
+  --color-success: oklch(52.73% 0.1371 150.07);
+  --color-success-content: oklch(98.59% 0.0213 154.14);
+  --color-warning: oklch(55.53% 0.1455 49.00);
+  --color-warning-content: oklch(98.21% 0.0141 74.43);
+  --color-error: oklch(50.54% 0.1905 27.52);
+  --color-error-content: oklch(97.79% 0.0107 17.34);
+  --radius-selector: 0.75rem;
+  --radius-field: 0.625rem;
+  --radius-box: 1.25rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* ---------------------------------------------------------------
+   FindTheWay — global uslublar
+   --------------------------------------------------------------- */
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Mavzu almashganda ranglar silliq o'tsin */
+:root {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Hero orqa fonidagi yumshoq yorug'lik dog'lari */
+.ftw-glow {
+  background-image: radial-gradient(
+      55% 45% at 15% 0%,
+      color-mix(in oklab, var(--color-primary) 20%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      50% 45% at 88% 10%,
+      color-mix(in oklab, var(--color-secondary) 18%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      45% 40% at 55% 100%,
+      color-mix(in oklab, var(--color-accent) 12%, transparent),
+      transparent 70%
+    );
+}
+
+/* Nozik katak naqsh */
+.ftw-grid {
+  background-image: linear-gradient(
+      to right,
+      color-mix(in oklab, var(--color-base-content) 7%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--color-base-content) 7%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 60px 60px;
+  -webkit-mask-image: radial-gradient(
+    75% 65% at 50% 0%,
+    #000 30%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(75% 65% at 50% 0%, #000 30%, transparent 100%);
+}
+
+/* Gradientli sarlavha matni */
+.ftw-gradient-text {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-primary),
+    color-mix(in oklab, var(--color-secondary) 85%, var(--color-primary))
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Shishasimon karta */
+.ftw-glass {
+  background-color: color-mix(in oklab, var(--color-base-100) 65%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Karta hover effekti */
+.ftw-card {
+  border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  background-color: color-mix(in oklab, var(--color-base-200) 60%, transparent);
+  transition: transform 0.25s ease, border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.ftw-card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in oklab, var(--color-primary) 45%, transparent);
+  box-shadow: 0 18px 40px -18px
+    color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+
+/* Sahifa ochilganda paydo bo'lish animatsiyasi */
+@keyframes ftw-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ftw-rise {
+  animation: ftw-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes ftw-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.ftw-float {
+  animation: ftw-float 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ftw-rise,
+  .ftw-float {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
