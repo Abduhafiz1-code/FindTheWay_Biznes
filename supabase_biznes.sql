@@ -20,6 +20,76 @@ create trigger centers_touch_updated_at
   for each row
   execute function public.touch_updated_at();
 
+-- 0.1) OBUNALAR — har bir markazga 30 kunlik trial avtomatik beriladi.
+create table if not exists public.subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  center_id uuid not null unique references public.centers(id) on delete cascade,
+  status text not null default 'trial' check (status in ('trial', 'pending', 'active', 'expired')),
+  trial_ends_at timestamptz not null default (now() + interval '30 days'),
+  paid_until timestamptz,
+  receipt_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.subscriptions enable row level security;
+
+drop policy if exists "subscriptions_owner_read" on public.subscriptions;
+create policy "subscriptions_owner_read" on public.subscriptions
+  for select using (
+    exists (select 1 from public.centers c where c.id = subscriptions.center_id and c.owner_id = auth.uid())
+  );
+
+drop policy if exists "subscriptions_owner_update" on public.subscriptions;
+create policy "subscriptions_owner_update" on public.subscriptions
+  for update using (
+    exists (select 1 from public.centers c where c.id = subscriptions.center_id and c.owner_id = auth.uid())
+  ) with check (
+    status = 'pending'
+    and exists (select 1 from public.centers c where c.id = subscriptions.center_id and c.owner_id = auth.uid())
+  );
+
+create or replace function public.create_center_subscription()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.subscriptions (center_id)
+  values (new.id)
+  on conflict (center_id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists center_subscription_created on public.centers;
+create trigger center_subscription_created
+  after insert on public.centers
+  for each row execute function public.create_center_subscription();
+
+insert into public.subscriptions (center_id)
+select c.id from public.centers c
+where not exists (select 1 from public.subscriptions s where s.center_id = c.id);
+
+create index if not exists subscriptions_status_idx on public.subscriptions (status);
+create index if not exists subscriptions_trial_ends_idx on public.subscriptions (trial_ends_at);
+
+-- Cheklar uchun private storage bucket va owner upload/update huquqi.
+insert into storage.buckets (id, name, public)
+values ('subscription-receipts', 'subscription-receipts', false)
+on conflict (id) do nothing;
+
+drop policy if exists "subscription_receipts_owner_insert" on storage.objects;
+create policy "subscription_receipts_owner_insert" on storage.objects
+  for insert to authenticated with check (
+    bucket_id = 'subscription-receipts'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "subscription_receipts_owner_read" on storage.objects;
+create policy "subscription_receipts_owner_read" on storage.objects
+  for select to authenticated using (
+    bucket_id = 'subscription-receipts'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
 
 -- ------------------------------------------------------------
 -- 1) COURSES — markazning kurslari

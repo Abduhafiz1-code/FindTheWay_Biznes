@@ -1,55 +1,56 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { useUiStore } from '../stores/ui'
-import { useAuthStore } from '../stores/auth'
-import { useBizStore } from '../stores/biz'
-import AppIcon from '../components/AppIcon.vue'
-import BaseDropdown from '../components/BaseDropdown.vue'
-import LocaleSwitcher from '../components/LocaleSwitcher.vue'
-import ThemeSwitcher from '../components/ThemeSwitcher.vue'
+import { ref, computed, watch } from "vue";
+import { RouterLink, useRoute, useRouter } from "vue-router";
+import { useUiStore } from "../stores/ui";
+import { useAuthStore } from "../stores/auth";
+import { useBizStore } from "../stores/biz";
+import AppIcon from "../components/AppIcon.vue";
+import BaseDropdown from "../components/BaseDropdown.vue";
+import LocaleSwitcher from "../components/LocaleSwitcher.vue";
+import ThemeSwitcher from "../components/ThemeSwitcher.vue";
 
-const ui = useUiStore()
-const auth = useAuthStore()
-const biz = useBizStore()
-const route = useRoute()
-const router = useRouter()
+const ui = useUiStore();
+const auth = useAuthStore();
+const biz = useBizStore();
+const route = useRoute();
+const router = useRouter();
 
-const mobileOpen = ref(false)
+const mobileOpen = ref(false);
 
 const links = [
-  { to: '/', icon: 'dashboard', key: 'nav.dashboard' },
-  { to: '/arizalar', icon: 'inbox', key: 'nav.applications', badge: true },
-  { to: '/markazim', icon: 'building', key: 'nav.center' },
-  { to: '/kurslar', icon: 'book', key: 'nav.courses' },
-  { to: '/sozlamalar', icon: 'settings', key: 'nav.settings' },
-]
+  { to: "/", icon: "dashboard", key: "nav.dashboard" },
+  { to: "/arizalar", icon: "inbox", key: "nav.applications", badge: true },
+  { to: "/markazim", icon: "building", key: "nav.center" },
+  { to: "/kurslar", icon: "book", key: "nav.courses" },
+  { to: "/sozlamalar", icon: "settings", key: "nav.settings" },
+  { to: "/to-lov", icon: "wallet", key: "nav.payment" },
+];
 
-const pageTitle = computed(() => ui.t(route.meta?.titleKey ?? 'nav.dashboard'))
+const pageTitle = computed(() => ui.t(route.meta?.titleKey ?? "nav.dashboard"));
 
 const initials = computed(() => {
-  const name = auth.displayName || 'F'
+  const name = auth.displayName || "F";
   return name
-    .split(' ')
+    .split(" ")
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0].toUpperCase())
-    .join('')
-})
+    .join("");
+});
 
 watch(
   () => route.fullPath,
   () => {
-    mobileOpen.value = false
+    mobileOpen.value = false;
   },
-)
+);
 
 async function handleLogout() {
   try {
-    await auth.signOut()
+    await auth.signOut();
   } finally {
-    biz.reset()
-    router.push('/login')
+    biz.reset();
+    router.push("/login");
   }
 }
 </script>
@@ -81,9 +82,10 @@ async function handleLogout() {
             <AppIcon name="compass" :size="19" />
           </span>
           <span class="text-[15px] font-extrabold leading-tight tracking-tight">
-            {{ ui.t('brand.name') }}
-            <span class="block text-[11px] font-bold uppercase tracking-widest text-primary">
-              {{ ui.t('brand.suffix') }}
+            {{ ui.t("brand.name") }}
+            <span
+              class="block text-[11px] font-bold uppercase tracking-widest text-primary">
+              {{ ui.t("brand.suffix") }}
             </span>
           </span>
         </RouterLink>
@@ -126,9 +128,15 @@ async function handleLogout() {
             <AppIcon
               :name="biz.center.is_verified ? 'checkCircle' : 'hourglass'"
               :size="13"
-              :class="biz.center.is_verified ? 'text-success' : 'text-warning'" />
+              :class="
+                biz.center.is_verified ? 'text-success' : 'text-warning'
+              " />
             <span class="opacity-70">
-              {{ biz.center.is_verified ? ui.t('center.verified') : ui.t('center.notVerified') }}
+              {{
+                biz.center.is_verified
+                  ? ui.t("center.verified")
+                  : ui.t("center.notVerified")
+              }}
             </span>
           </p>
         </div>
@@ -136,8 +144,12 @@ async function handleLogout() {
           v-else
           to="/markazim"
           class="block rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-3.5 text-xs leading-relaxed transition-colors hover:bg-primary/10">
-          <span class="font-bold text-primary">{{ ui.t('center.createCenter') }}</span>
-          <span class="mt-1 block opacity-65">{{ ui.t('center.noCenterHint') }}</span>
+          <span class="font-bold text-primary">{{
+            ui.t("center.createCenter")
+          }}</span>
+          <span class="mt-1 block opacity-65">{{
+            ui.t("center.noCenterHint")
+          }}</span>
         </RouterLink>
       </div>
 
@@ -147,7 +159,7 @@ async function handleLogout() {
           class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-base-content/70 transition-colors hover:bg-error/10 hover:text-error"
           @click="handleLogout">
           <AppIcon name="logout" :size="18" />
-          {{ ui.t('nav.logout') }}
+          {{ ui.t("nav.logout") }}
         </button>
       </div>
     </aside>
@@ -164,7 +176,8 @@ async function handleLogout() {
           <AppIcon name="menu" :size="20" />
         </button>
 
-        <h1 class="flex-1 truncate text-base font-bold tracking-tight sm:text-lg">
+        <h1
+          class="flex-1 truncate text-base font-bold tracking-tight sm:text-lg">
           {{ pageTitle }}
         </h1>
 
@@ -198,14 +211,14 @@ async function handleLogout() {
             to="/sozlamalar"
             class="mt-1 flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors hover:bg-base-200">
             <AppIcon name="settings" :size="16" />
-            {{ ui.t('nav.settings') }}
+            {{ ui.t("nav.settings") }}
           </RouterLink>
           <button
             type="button"
             class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-error transition-colors hover:bg-error/10"
             @click="handleLogout">
             <AppIcon name="logout" :size="16" />
-            {{ ui.t('nav.logout') }}
+            {{ ui.t("nav.logout") }}
           </button>
         </BaseDropdown>
       </header>
