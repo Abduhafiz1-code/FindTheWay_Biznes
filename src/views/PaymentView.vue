@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { useBizStore } from "../stores/biz";
+import { useBizStore, calculatePrice } from "../stores/biz";
 import AppIcon from "../components/AppIcon.vue";
 
 const biz = useBizStore();
@@ -8,6 +8,20 @@ const file = ref(null);
 const uploading = ref(false);
 const message = ref("");
 const errorMessage = ref("");
+
+const planLabel = computed(() =>
+  (biz.subscription?.plan || "pro").toUpperCase(),
+);
+const cycleLabel = computed(() =>
+  biz.subscription?.billing_cycle === "yearly" ? "yillik" : "oylik",
+);
+const currentPrice = computed(() =>
+  calculatePrice({
+    plan: biz.subscription?.plan || "pro",
+    cycle: biz.subscription?.billing_cycle || "monthly",
+    isExtraCenter: !!biz.subscription?.is_extra_center,
+  }),
+);
 
 const statusLabel = computed(
   () =>
@@ -71,7 +85,17 @@ onMounted(() => biz.loadSubscription());
       <div class="grid gap-3 sm:grid-cols-2">
         <div class="rounded-xl bg-base-200/70 p-4">
           <p class="text-xs opacity-55">To‘lov uchun</p>
-          <p class="mt-1 text-lg font-black">150 000 so‘m / oy</p>
+          <p class="mt-1 text-lg font-black">
+            {{ currentPrice.toLocaleString("uz-UZ") }} so‘m / {{ cycleLabel }}
+          </p>
+          <p class="mt-1 text-xs opacity-55">
+            {{ planLabel }} ·
+            {{
+              biz.subscription?.is_extra_center
+                ? "Qo‘shimcha markaz"
+                : "Birinchi markaz"
+            }}
+          </p>
         </div>
         <div class="rounded-xl bg-base-200/70 p-4">
           <p class="text-xs opacity-55">Karta raqami</p>

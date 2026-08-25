@@ -22,6 +22,7 @@ const links = [
   { to: "/arizalar", icon: "inbox", key: "nav.applications", badge: true },
   { to: "/markazim", icon: "building", key: "nav.center" },
   { to: "/kurslar", icon: "book", key: "nav.courses" },
+  { to: "/ai-yordamchi", icon: "sparkles", key: "nav.aiAssistant" },
   { to: "/sozlamalar", icon: "settings", key: "nav.settings" },
   { to: "/to-lov", icon: "wallet", key: "nav.payment" },
 ];

@@ -3,6 +3,26 @@ import { defineStore } from "pinia";
 import { supabase } from "../supabase";
 import { useAuthStore } from "./auth";
 
+export function calculatePrice({
+  plan = "pro",
+  cycle = "monthly",
+  isExtraCenter = false,
+} = {}) {
+  const base = { pro: 200000, max: 350000 }[plan] ?? 200000;
+  const yearlyMonthly = base * 0.7;
+  let price = cycle === "yearly" ? yearlyMonthly : base;
+
+  if (isExtraCenter && plan === "pro") {
+    price = price * 0.8;
+  }
+
+  if (isExtraCenter && plan === "max") {
+    price = 0;
+  }
+
+  return cycle === "yearly" ? Math.round(price * 12) : Math.round(price);
+}
+
 export const APPLICATION_STATUSES = [
   "new",
   "seen",
@@ -39,9 +59,13 @@ export const STATUS_META = {
   },
 };
 
+const SUBSCRIPTION_FIELDS =
+  "id, center_id, status, plan, billing_cycle, is_extra_center, trial_ends_at, paid_until, receipt_url";
+
 // Markaz, kurslar va arizalar bilan ishlaydigan asosiy store
 export const useBizStore = defineStore("biz", () => {
   const center = ref(null);
+  const centers = ref([]);
   const courses = ref([]);
   const applications = ref([]);
   const subscription = ref(null);
@@ -54,6 +78,15 @@ export const useBizStore = defineStore("biz", () => {
   let channel = null;
 
   const hasCenter = computed(() => !!center.value);
+  const centerCount = computed(() => centers.value.length);
+  const isExtraCenter = computed(() => centerCount.value > 1);
+  const maxCentersForPlan = computed(() => {
+    const plan = subscription.value?.plan || "pro";
+    return plan === "pro" ? 1 : plan === "max" ? 5 : 1;
+  });
+  const canAddCenter = computed(
+    () => centerCount.value < maxCentersForPlan.value,
+  );
 
   const newCount = computed(
     () => applications.value.filter((a) => a.status === "new").length,
@@ -113,22 +146,43 @@ export const useBizStore = defineStore("biz", () => {
     console.warn(`[FindTheWay Biznes] ${context}:`, lastError.value);
   }
 
-  async function loadCenter() {
+  async function loadCenters() {
     const auth = useAuthStore();
-    if (!auth.user) return null;
+    if (!auth.user) {
+      centers.value = [];
+      center.value = null;
+      return [];
+    }
+
     loadingCenter.value = true;
     const { data, error } = await supabase
       .from("centers")
       .select("*")
       .eq("owner_id", auth.user.id)
-      .maybeSingle();
+      .order("created_at", { ascending: false });
     loadingCenter.value = false;
+
     if (error) {
-      note(error, "Markazni yuklash");
-      return null;
+      note(error, "Markazlarni yuklash");
+      centers.value = [];
+      center.value = null;
+      return [];
     }
-    center.value = data;
-    return data;
+
+    centers.value = data ?? [];
+    center.value = centers.value[0] ?? null;
+    return centers.value;
+  }
+
+  async function loadCenter() {
+    return loadCenters();
+  }
+
+  function selectCenter(centerId) {
+    const next = centers.value.find((item) => item.id === centerId) ?? null;
+    if (next?.id !== center.value?.id) unsubscribe();
+    center.value = next;
+    return next;
   }
 
   async function loadSubscription() {
@@ -138,7 +192,7 @@ export const useBizStore = defineStore("biz", () => {
     }
     const { data, error } = await supabase
       .from("subscriptions")
-      .select("id, center_id, status, trial_ends_at, paid_until, receipt_url")
+      .select(SUBSCRIPTION_FIELDS)
       .eq("center_id", center.value.id)
       .maybeSingle();
     if (error) {
@@ -165,7 +219,7 @@ export const useBizStore = defineStore("biz", () => {
       .from("subscriptions")
       .update({ status: "pending", receipt_url: path })
       .eq("center_id", center.value.id)
-      .select("id, center_id, status, trial_ends_at, paid_until, receipt_url")
+      .select(SUBSCRIPTION_FIELDS)
       .single();
     if (error) throw error;
     subscription.value = data;
@@ -185,6 +239,8 @@ export const useBizStore = defineStore("biz", () => {
         .single();
       if (error) throw error;
       center.value = data;
+      const index = centers.value.findIndex((item) => item.id === data.id);
+      if (index !== -1) centers.value[index] = data;
       return data;
     }
 
@@ -195,6 +251,7 @@ export const useBizStore = defineStore("biz", () => {
       .single();
     if (error) throw error;
     center.value = data;
+    centers.value = [data, ...centers.value];
     return data;
   }
 
@@ -328,7 +385,7 @@ export const useBizStore = defineStore("biz", () => {
 
   // Panelga kirganda hammasini bir marta yuklaymiz
   async function bootstrap() {
-    await loadCenter();
+    const list = await loadCenters();
     if (center.value?.id) {
       await Promise.all([
         loadCourses(),
@@ -337,11 +394,13 @@ export const useBizStore = defineStore("biz", () => {
       ]);
       subscribe();
     }
+    return list;
   }
 
   function reset() {
     unsubscribe();
     center.value = null;
+    centers.value = [];
     courses.value = [];
     applications.value = [];
     subscription.value = null;
@@ -350,6 +409,7 @@ export const useBizStore = defineStore("biz", () => {
 
   return {
     center,
+    centers,
     courses,
     applications,
     subscription,
@@ -358,6 +418,10 @@ export const useBizStore = defineStore("biz", () => {
     loadingApplications,
     lastError,
     hasCenter,
+    centerCount,
+    isExtraCenter,
+    maxCentersForPlan,
+    canAddCenter,
     newCount,
     acceptedCount,
     totalCount,
@@ -369,6 +433,8 @@ export const useBizStore = defineStore("biz", () => {
     subscriptionWarning,
     chartData,
     loadCenter,
+    loadCenters,
+    selectCenter,
     loadSubscription,
     uploadReceipt,
     saveCenter,

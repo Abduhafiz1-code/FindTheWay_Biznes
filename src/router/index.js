@@ -69,6 +69,16 @@ const routes = [
     },
   },
   {
+    path: "/ai-yordamchi",
+    name: "ai-assistant",
+    component: () => import("../views/AiAssistantView.vue"),
+    meta: {
+      layout: "dashboard",
+      requiresOwner: true,
+      title: "AI yordamchi · FindTheWay Biznes",
+    },
+  },
+  {
     path: "/sozlamalar",
     name: "settings",
     component: () => import("../views/SettingsView.vue"),

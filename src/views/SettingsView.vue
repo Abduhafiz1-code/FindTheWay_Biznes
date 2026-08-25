@@ -1,46 +1,103 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useUiStore } from '../stores/ui'
-import { useAuthStore } from '../stores/auth'
-import { useBizStore } from '../stores/biz'
-import AppIcon from '../components/AppIcon.vue'
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { useUiStore } from "../stores/ui";
+import { useAuthStore } from "../stores/auth";
+import { useBizStore } from "../stores/biz";
+import AppIcon from "../components/AppIcon.vue";
+import { supabase } from "../supabase";
 
-const ui = useUiStore()
-const auth = useAuthStore()
-const biz = useBizStore()
-const router = useRouter()
+const ui = useUiStore();
+const auth = useAuthStore();
+const biz = useBizStore();
+const router = useRouter();
 
-const newPassword = ref('')
-const changing = ref(false)
-const okText = ref('')
-const errorText = ref('')
+const newPassword = ref("");
+const telegramChatId = ref(auth.profile?.telegram_chat_id ?? "");
+const changing = ref(false);
+const savingTelegram = ref(false);
+const testingTelegram = ref(false);
+const okText = ref("");
+const errorText = ref("");
+const telegramText = ref("");
+const telegramError = ref("");
 
 async function handlePassword() {
-  okText.value = ''
-  errorText.value = ''
+  okText.value = "";
+  errorText.value = "";
   if (newPassword.value.length < 6) {
-    errorText.value = ui.t('auth.errPasswordShort')
-    return
+    errorText.value = ui.t("auth.errPasswordShort");
+    return;
   }
-  changing.value = true
+  changing.value = true;
   try {
-    await auth.updatePassword(newPassword.value)
-    newPassword.value = ''
-    okText.value = ui.t('settings.passwordChanged')
+    await auth.updatePassword(newPassword.value);
+    newPassword.value = "";
+    okText.value = ui.t("settings.passwordChanged");
   } catch (error) {
-    errorText.value = error?.message || ui.t('common.error')
+    errorText.value = error?.message || ui.t("common.error");
   } finally {
-    changing.value = false
+    changing.value = false;
+  }
+}
+
+async function handleTelegramSave() {
+  telegramText.value = "";
+  telegramError.value = "";
+
+  if (!telegramChatId.value.trim()) {
+    telegramError.value = "Telegram chat ID yoki username ni kiriting.";
+    return;
+  }
+
+  savingTelegram.value = true;
+  try {
+    await auth.saveTelegramChatId(telegramChatId.value);
+    telegramText.value = "Telegram chat ID muvaffaqiyatli saqlandi.";
+  } catch (error) {
+    telegramError.value =
+      error?.message || "Telegram chat ID saqlashda xatolik yuz berdi.";
+  } finally {
+    savingTelegram.value = false;
+  }
+}
+
+async function handleTelegramTest() {
+  telegramText.value = "";
+  telegramError.value = "";
+
+  const chat = telegramChatId.value.trim();
+  if (!chat) {
+    telegramError.value = "Telegram chat ID yoki username ni kiriting.";
+    return;
+  }
+
+  testingTelegram.value = true;
+  try {
+    await auth.saveTelegramChatId(chat);
+    const { data, error } = await supabase.functions.invoke("send-reminder", {
+      body: { action: "test" },
+    });
+    if (error) throw error;
+    if (!data?.success) {
+      throw new Error(data?.error || "Telegram xabarini yuborib bo'lmadi.");
+    }
+
+    telegramText.value = "Telegram test xabari muvaffaqiyatli yuborildi.";
+  } catch (error) {
+    telegramError.value =
+      error?.message || "Telegram test xabarini yuborishda xatolik yuz berdi.";
+  } finally {
+    testingTelegram.value = false;
   }
 }
 
 async function handleLogout() {
   try {
-    await auth.signOut()
+    await auth.signOut();
   } finally {
-    biz.reset()
-    router.push('/login')
+    biz.reset();
+    router.push("/login");
   }
 }
 </script>
@@ -48,16 +105,20 @@ async function handleLogout() {
 <template>
   <div class="max-w-2xl space-y-6">
     <div>
-      <h2 class="text-2xl font-black tracking-tight">{{ ui.t('settings.title') }}</h2>
-      <p class="mt-1 text-sm opacity-60">{{ ui.t('settings.subtitle') }}</p>
+      <h2 class="text-2xl font-black tracking-tight">
+        {{ ui.t("settings.title") }}
+      </h2>
+      <p class="mt-1 text-sm opacity-60">{{ ui.t("settings.subtitle") }}</p>
     </div>
 
     <!-- Ko'rinish -->
     <section class="ftw-card space-y-5 p-5">
-      <h3 class="text-sm font-bold">{{ ui.t('settings.appearance') }}</h3>
+      <h3 class="text-sm font-bold">{{ ui.t("settings.appearance") }}</h3>
 
       <div>
-        <p class="mb-2.5 text-sm font-semibold">{{ ui.t('settings.themeLabel') }}</p>
+        <p class="mb-2.5 text-sm font-semibold">
+          {{ ui.t("settings.themeLabel") }}
+        </p>
         <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
           <button
             v-for="item in ui.themes"
@@ -83,7 +144,9 @@ async function handleLogout() {
       </div>
 
       <div>
-        <p class="mb-2.5 text-sm font-semibold">{{ ui.t('settings.languageLabel') }}</p>
+        <p class="mb-2.5 text-sm font-semibold">
+          {{ ui.t("settings.languageLabel") }}
+        </p>
         <div class="flex gap-2.5">
           <button
             v-for="item in ui.locales"
@@ -105,22 +168,66 @@ async function handleLogout() {
 
     <!-- Hisob -->
     <section class="ftw-card space-y-3 p-5">
-      <h3 class="text-sm font-bold">{{ ui.t('settings.account') }}</h3>
+      <h3 class="text-sm font-bold">{{ ui.t("settings.account") }}</h3>
       <div class="flex items-center justify-between gap-3 text-sm">
-        <span class="opacity-60">{{ ui.t('settings.accountEmail') }}</span>
+        <span class="opacity-60">{{ ui.t("settings.accountEmail") }}</span>
         <span class="truncate font-semibold">{{ auth.user?.email }}</span>
       </div>
       <div class="flex items-center justify-between gap-3 text-sm">
-        <span class="opacity-60">{{ ui.t('settings.accountRole') }}</span>
+        <span class="opacity-60">{{ ui.t("settings.accountRole") }}</span>
         <span class="badge badge-primary badge-sm font-semibold">
-          {{ ui.t('settings.roleOwner') }}
+          {{ ui.t("settings.roleOwner") }}
         </span>
       </div>
     </section>
 
+    <!-- Telegram eslatma -->
+    <section class="ftw-card space-y-4 p-5">
+      <div>
+        <h3 class="text-sm font-bold">Telegram eslatma</h3>
+        <p class="mt-1 text-sm opacity-60">
+          Obunani tugash arafasida xabar yuborish uchun chat ID yoki username
+          kiriting.
+        </p>
+      </div>
+
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <input
+          v-model="telegramChatId"
+          type="text"
+          class="input input-bordered h-12 flex-1 rounded-xl"
+          placeholder="@your_bot_username yoki 123456789" />
+        <div class="flex gap-2">
+          <button
+            type="button"
+            class="btn btn-primary h-12 rounded-xl"
+            :disabled="savingTelegram"
+            @click="handleTelegramSave">
+            <span
+              v-if="savingTelegram"
+              class="loading loading-spinner loading-sm" />
+            {{ savingTelegram ? "Saqlanmoqda..." : "Saqlash" }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline h-12 rounded-xl"
+            :disabled="testingTelegram || !telegramChatId.trim()"
+            @click="handleTelegramTest">
+            <span
+              v-if="testingTelegram"
+              class="loading loading-spinner loading-sm" />
+            {{ testingTelegram ? "Yuborilmoqda..." : "Test xabar" }}
+          </button>
+        </div>
+      </div>
+
+      <p v-if="telegramText" class="text-sm text-success">{{ telegramText }}</p>
+      <p v-if="telegramError" class="text-sm text-error">{{ telegramError }}</p>
+    </section>
+
     <!-- Xavfsizlik -->
     <section class="ftw-card space-y-4 p-5">
-      <h3 class="text-sm font-bold">{{ ui.t('settings.security') }}</h3>
+      <h3 class="text-sm font-bold">{{ ui.t("settings.security") }}</h3>
 
       <p
         v-if="errorText"
@@ -134,7 +241,9 @@ async function handleLogout() {
         {{ okText }}
       </p>
 
-      <form class="flex flex-col gap-3 sm:flex-row" @submit.prevent="handlePassword">
+      <form
+        class="flex flex-col gap-3 sm:flex-row"
+        @submit.prevent="handlePassword">
         <input
           v-model="newPassword"
           type="password"
@@ -143,20 +252,24 @@ async function handleLogout() {
           :placeholder="ui.t('settings.newPassword')" />
         <button type="submit" class="btn h-12 rounded-xl" :disabled="changing">
           <span v-if="changing" class="loading loading-spinner loading-sm" />
-          {{ ui.t('settings.changePassword') }}
+          {{ ui.t("settings.changePassword") }}
         </button>
       </form>
     </section>
 
     <!-- Chiqish -->
-    <section class="ftw-card flex flex-wrap items-center justify-between gap-4 p-5">
+    <section
+      class="ftw-card flex flex-wrap items-center justify-between gap-4 p-5">
       <div>
-        <h3 class="text-sm font-bold">{{ ui.t('settings.danger') }}</h3>
-        <p class="mt-1 text-sm opacity-60">{{ ui.t('settings.dangerText') }}</p>
+        <h3 class="text-sm font-bold">{{ ui.t("settings.danger") }}</h3>
+        <p class="mt-1 text-sm opacity-60">{{ ui.t("settings.dangerText") }}</p>
       </div>
-      <button type="button" class="btn btn-outline btn-error rounded-xl" @click="handleLogout">
+      <button
+        type="button"
+        class="btn btn-outline btn-error rounded-xl"
+        @click="handleLogout">
         <AppIcon name="logout" :size="17" />
-        {{ ui.t('settings.logout') }}
+        {{ ui.t("settings.logout") }}
       </button>
     </section>
   </div>

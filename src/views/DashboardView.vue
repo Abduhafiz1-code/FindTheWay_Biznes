@@ -65,6 +65,16 @@ function shortDate(value) {
         class="mt-2 shrink-0 opacity-45" />
     </RouterLink>
 
+    <div
+      v-if="biz.centers.length > 1"
+      class="flex items-center gap-3 rounded-2xl border border-base-content/10 bg-base-200/40 p-3">
+      <AppIcon name="building" :size="17" class="text-primary" />
+      <div class="flex-1 text-sm">
+        <span class="font-bold">Ko‘p markazli rejim</span>
+        <span class="ml-2 opacity-60">{{ biz.centers.length }} ta markaz</span>
+      </div>
+    </div>
+
     <!-- Markaz yo'q bo'lsa ogohlantirish -->
     <RouterLink
       v-if="!biz.hasCenter"
