@@ -1,5 +1,36 @@
-# Vue 3 + Vite
+# FindTheWay Biznes
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+O'quv markazlari egalari uchun FindTheWay boshqaruv paneli. Markaz profili, kurslar, arizalar, to'lov cheklari, Telegram eslatmalari va Groq asosidagi AI yordamchini boshqaradi.
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## Ishga tushirish
+
+```bash
+npm install
+npm run dev
+```
+
+`.env` faylida quyidagilar bo'lishi kerak:
+
+```text
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+## Production deploy
+
+Vercel build sozlamalari:
+
+```text
+Build Command: npm run build
+Output Directory: dist
+Production Branch: main
+```
+
+Supabase Edge Functions uchun `GROQ_API_KEY` va `TELEGRAM_BOT_TOKEN` qiymatlarini Supabase Secrets orqali qo'shing. Ularni hech qachon front-end `.env` fayliga yozmang.
+
+Deploy qilinadigan funksiyalar:
+
+```text
+ai-chat
+send-reminder
+```
