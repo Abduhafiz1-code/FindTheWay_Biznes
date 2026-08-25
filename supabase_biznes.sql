@@ -40,6 +40,14 @@ create policy "subscriptions_owner_read" on public.subscriptions
     exists (select 1 from public.centers c where c.id = subscriptions.center_id and c.owner_id = auth.uid())
   );
 
+-- O'quvchi ilovasi faqat muddati o'tmagan trial yoki to'langan markazni ko'radi.
+drop policy if exists "subscriptions_public_read_active" on public.subscriptions;
+create policy "subscriptions_public_read_active" on public.subscriptions
+  for select using (
+    (status = 'trial' and trial_ends_at > now())
+    or (status = 'active' and paid_until > now())
+  );
+
 drop policy if exists "subscriptions_owner_update" on public.subscriptions;
 create policy "subscriptions_owner_update" on public.subscriptions
   for update using (
