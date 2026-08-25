@@ -4,6 +4,8 @@ O'quv markazlari egalari uchun FindTheWay boshqaruv paneli. Markaz profili, kurs
 
 ## Ishga tushirish
 
+######### test
+
 ```bash
 npm install
 npm run dev
