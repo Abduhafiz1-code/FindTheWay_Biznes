@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useUiStore } from '../stores/ui'
 import { useBizStore } from '../stores/biz'
 import AppIcon from '../components/AppIcon.vue'
@@ -22,6 +22,13 @@ const savedText = ref('')
 const errorText = ref('')
 
 function fill(center) {
+  form.name = ''
+  form.description = ''
+  form.district = ''
+  form.address = ''
+  form.phone = ''
+  form.website = ''
+  form.price_from = null
   if (!center) return
   form.name = center.name ?? ''
   form.description = center.description ?? ''
@@ -31,6 +38,8 @@ function fill(center) {
   form.website = center.website ?? ''
   form.price_from = center.price_from ?? null
 }
+
+const creating = computed(() => !biz.center)
 
 onMounted(() => fill(biz.center))
 watch(() => biz.center, fill)
@@ -44,6 +53,7 @@ async function handleSubmit() {
   }
 
   saving.value = true
+  const wasCreating = !biz.center
   try {
     await biz.saveCenter({
       name: form.name.trim(),
@@ -54,10 +64,9 @@ async function handleSubmit() {
       website: form.website.trim() || null,
       price_from: form.price_from ? Number(form.price_from) : null,
     })
-    savedText.value = ui.t('common.saved')
-    await biz.loadCourses()
-    await biz.loadApplications()
-    biz.subscribe()
+    savedText.value = wasCreating
+      ? "Markaz yaratildi — 30 kunlik bepul sinov boshlandi."
+      : ui.t('common.saved')
   } catch (error) {
     errorText.value = error?.message || ui.t('common.error')
   } finally {
@@ -70,8 +79,16 @@ async function handleSubmit() {
   <div class="space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h2 class="text-2xl font-black tracking-tight">{{ ui.t('center.title') }}</h2>
-        <p class="mt-1 text-sm opacity-60">{{ ui.t('center.subtitle') }}</p>
+        <h2 class="text-2xl font-black tracking-tight">
+          {{ creating ? "Yangi markaz qo'shish" : ui.t('center.title') }}
+        </h2>
+        <p class="mt-1 text-sm opacity-60">
+          {{
+            creating
+              ? "Markazingizni joylang — o'quvchilarga 30 kun bepul ko'rinadi, so'ngra tarif bo'yicha to'lanadi."
+              : ui.t('center.subtitle')
+          }}
+        </p>
       </div>
       <span
         v-if="biz.center"

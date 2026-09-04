@@ -79,14 +79,49 @@ export const useBizStore = defineStore("biz", () => {
 
   const hasCenter = computed(() => !!center.value);
   const centerCount = computed(() => centers.value.length);
-  const isExtraCenter = computed(() => centerCount.value > 1);
-  const maxCentersForPlan = computed(() => {
-    const plan = subscription.value?.plan || "pro";
-    return plan === "pro" ? 1 : plan === "max" ? 5 : 1;
-  });
-  const canAddCenter = computed(
-    () => centerCount.value < maxCentersForPlan.value,
-  );
+  // Har qanday tarifda (Pro/Max) egasi bir nechta markaz ocha oladi:
+  // Pro da qo'shimcha markaz alohida to'lanadi (−20%), Max da bepul.
+
+  // Oxirgi tanlangan markaz (sahifa yangilanganda ham saqlanadi)
+  const ACTIVE_KEY = "ftw:active_center_id";
+
+  function rememberCenterId(id) {
+    try {
+      if (id) localStorage.setItem(ACTIVE_KEY, id);
+      else localStorage.removeItem(ACTIVE_KEY);
+    } catch {
+      /* storage mavjud bo'lmasa ham davom etamiz */
+    }
+  }
+
+  function pickActiveCenter(list) {
+    if (!list.length) return null;
+    let saved = null;
+    try {
+      saved = localStorage.getItem(ACTIVE_KEY);
+    } catch {
+      saved = null;
+    }
+    return (
+      list.find((item) => String(item.id) === saved) ?? list[0] ?? null
+    );
+  }
+
+  // Tanlangan markaz uchun kurslar, arizalar, obuna va realtime
+  async function loadCenterScope() {
+    if (!center.value?.id) {
+      courses.value = [];
+      applications.value = [];
+      subscription.value = null;
+      return;
+    }
+    await Promise.all([
+      loadCourses(),
+      loadApplications(),
+      loadSubscription(),
+    ]);
+    subscribe();
+  }
 
   const newCount = computed(
     () => applications.value.filter((a) => a.status === "new").length,
@@ -170,7 +205,10 @@ export const useBizStore = defineStore("biz", () => {
     }
 
     centers.value = data ?? [];
-    center.value = centers.value[0] ?? null;
+    const active = pickActiveCenter(centers.value);
+    if (active?.id !== center.value?.id) unsubscribe();
+    center.value = active;
+    rememberCenterId(center.value?.id ?? "");
     return centers.value;
   }
 
@@ -178,11 +216,26 @@ export const useBizStore = defineStore("biz", () => {
     return loadCenters();
   }
 
-  function selectCenter(centerId) {
+  /** Boshqa markazga o'tish — uning kurslari, arizalari va obunasi yuklanadi. */
+  async function selectCenter(centerId) {
     const next = centers.value.find((item) => item.id === centerId) ?? null;
-    if (next?.id !== center.value?.id) unsubscribe();
+    if (next?.id === center.value?.id) return next;
+
+    unsubscribe();
     center.value = next;
+    rememberCenterId(center.value?.id ?? "");
+    if (next) await loadCenterScope();
     return next;
+  }
+
+  /** Yangi markaz yaratish rejimi — markazim sahifasi bo'sh forma ko'rsatadi. */
+  function beginCreateCenter() {
+    unsubscribe();
+    rememberCenterId("");
+    center.value = null;
+    courses.value = [];
+    applications.value = [];
+    subscription.value = null;
   }
 
   async function loadSubscription() {
@@ -215,9 +268,21 @@ export const useBizStore = defineStore("biz", () => {
       .from("subscription-receipts")
       .upload(path, file, { upsert: true, contentType: file.type });
     if (uploadError) throw uploadError;
+    // Trial hali tugamagan bo'lsa — chek saqlanadi, lekin markaz
+    // o'quvchilardan yashirinmaydi (status 'pending' bo'lib qolmaydi).
+    const sub = subscription.value;
+    const trialActive =
+      sub?.status === "trial" &&
+      sub.trial_ends_at &&
+      new Date(sub.trial_ends_at) > new Date();
+
+    const patch = trialActive
+      ? { receipt_url: path }
+      : { status: "pending", receipt_url: path };
+
     const { data, error } = await supabase
       .from("subscriptions")
-      .update({ status: "pending", receipt_url: path })
+      .update(patch)
       .eq("center_id", center.value.id)
       .select(SUBSCRIPTION_FIELDS)
       .single();
@@ -250,8 +315,12 @@ export const useBizStore = defineStore("biz", () => {
       .select()
       .single();
     if (error) throw error;
+    unsubscribe();
     center.value = data;
+    rememberCenterId(data.id);
     centers.value = [data, ...centers.value];
+    // Yangi markazning 30 kunlik sinov obunasi va bo'sh kurslar/arizalar
+    await loadCenterScope();
     return data;
   }
 
@@ -387,18 +456,14 @@ export const useBizStore = defineStore("biz", () => {
   async function bootstrap() {
     const list = await loadCenters();
     if (center.value?.id) {
-      await Promise.all([
-        loadCourses(),
-        loadApplications(),
-        loadSubscription(),
-      ]);
-      subscribe();
+      await loadCenterScope();
     }
     return list;
   }
 
   function reset() {
     unsubscribe();
+    rememberCenterId("");
     center.value = null;
     centers.value = [];
     courses.value = [];
@@ -419,9 +484,6 @@ export const useBizStore = defineStore("biz", () => {
     lastError,
     hasCenter,
     centerCount,
-    isExtraCenter,
-    maxCentersForPlan,
-    canAddCenter,
     newCount,
     acceptedCount,
     totalCount,
@@ -435,6 +497,7 @@ export const useBizStore = defineStore("biz", () => {
     loadCenter,
     loadCenters,
     selectCenter,
+    beginCreateCenter,
     loadSubscription,
     uploadReceipt,
     saveCenter,

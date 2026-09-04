@@ -180,7 +180,12 @@ watch(() => biz.applications.length, syncFromQuery)
                       class="absolute -right-0.5 -top-0.5 size-2.5 rounded-full bg-primary ring-2 ring-base-100" />
                   </span>
                   <div class="min-w-0">
-                    <p class="truncate text-sm font-semibold">{{ item.student_name }}</p>
+                    <p class="flex items-center gap-1.5 truncate text-sm font-semibold">
+                      {{ item.student_name }}
+                      <span
+                        v-if="item.student_is_pro"
+                        class="badge badge-primary badge-xs font-black">PRO</span>
+                    </p>
                     <p class="truncate text-xs opacity-55 sm:hidden">{{ item.course_name }}</p>
                   </div>
                 </div>

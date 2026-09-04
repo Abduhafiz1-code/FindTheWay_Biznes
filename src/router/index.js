@@ -47,6 +47,46 @@ const routes = [
     },
   },
   {
+    path: "/modullar",
+    name: "modules",
+    component: () => import("../views/ModulesView.vue"),
+    meta: {
+      layout: "dashboard",
+      requiresOwner: true,
+      title: "Modullar do'koni · FindTheWay Biznes",
+    },
+  },
+  {
+    path: "/yordam",
+    name: "support",
+    component: () => import("../views/SupportView.vue"),
+    meta: {
+      layout: "dashboard",
+      requiresOwner: true,
+      title: "Yordam · FindTheWay Biznes",
+    },
+  },
+  {
+    path: "/murojaatlar",
+    name: "inquiries",
+    component: () => import("../views/InquiriesView.vue"),
+    meta: {
+      layout: "dashboard",
+      requiresOwner: true,
+      title: "Murojaatlar · FindTheWay Biznes",
+    },
+  },
+  {
+    path: "/so-rovlar",
+    name: "market",
+    component: () => import("../views/MarketRequestsView.vue"),
+    meta: {
+      layout: "dashboard",
+      requiresOwner: true,
+      title: "So'rovlar bozori · FindTheWay Biznes",
+    },
+  },
+  {
     path: "/markazim",
     name: "center",
     component: () => import("../views/CenterView.vue"),

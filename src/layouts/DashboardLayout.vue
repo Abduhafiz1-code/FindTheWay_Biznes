@@ -4,6 +4,10 @@ import { RouterLink, useRoute, useRouter } from "vue-router";
 import { useUiStore } from "../stores/ui";
 import { useAuthStore } from "../stores/auth";
 import { useBizStore } from "../stores/biz";
+import { useMarketStore } from "../stores/market";
+import { useInquiriesStore } from "../stores/inquiries";
+import { useSupportStore } from "../stores/support";
+import { useModulesStore } from "../stores/modules";
 import AppIcon from "../components/AppIcon.vue";
 import BaseDropdown from "../components/BaseDropdown.vue";
 import LocaleSwitcher from "../components/LocaleSwitcher.vue";
@@ -12,6 +16,10 @@ import ThemeSwitcher from "../components/ThemeSwitcher.vue";
 const ui = useUiStore();
 const auth = useAuthStore();
 const biz = useBizStore();
+const market = useMarketStore();
+const inquiries = useInquiriesStore();
+const supportStore = useSupportStore();
+const moduleStore = useModulesStore();
 const route = useRoute();
 const router = useRouter();
 
@@ -20,9 +28,12 @@ const mobileOpen = ref(false);
 const links = [
   { to: "/", icon: "dashboard", key: "nav.dashboard" },
   { to: "/arizalar", icon: "inbox", key: "nav.applications", badge: true },
+  { to: "/murojaatlar", icon: "mail", key: "nav.inquiries" },
+  { to: "/so-rovlar", icon: "message", key: "nav.market" },
   { to: "/markazim", icon: "building", key: "nav.center" },
   { to: "/kurslar", icon: "book", key: "nav.courses" },
   { to: "/ai-yordamchi", icon: "sparkles", key: "nav.aiAssistant" },
+  { to: "/modullar", icon: "ticket", key: "nav.modules" },
   { to: "/sozlamalar", icon: "settings", key: "nav.settings" },
   { to: "/to-lov", icon: "wallet", key: "nav.payment" },
 ];
@@ -39,6 +50,55 @@ const initials = computed(() => {
     .join("");
 });
 
+// -------------------------------------------------------------
+// Markazlar ro'yxati (switcher) uchun yordamchilar
+// -------------------------------------------------------------
+function daysLeft(dateValue) {
+  if (!dateValue) return null;
+  return Math.ceil((new Date(dateValue) - new Date()) / 86400000);
+}
+
+function statusInfo(center) {
+  if (!center) return { text: "", dot: "bg-base-content/25" };
+  const s = center.subscription_status;
+  const end = s === "active" ? center.paid_until : center.trial_ends_at;
+  const days = daysLeft(end);
+
+  if (s === "active") {
+    if (days === null) return { text: "Faol", dot: "bg-success" };
+    if (days <= 0)
+      return { text: "Obuna tugagan — to'lov qiling", dot: "bg-error" };
+    return {
+      text: days <= 5 ? `Faol · ${days} kun qoldi` : "Faol",
+      dot: days <= 5 ? "bg-warning" : "bg-success",
+    };
+  }
+  if (s === "trial") {
+    if (days <= 0)
+      return { text: "Sinov tugadi — to'lov qiling", dot: "bg-error" };
+    return {
+      text: `Sinov · ${days} kun qoldi`,
+      dot: days <= 5 ? "bg-warning" : "bg-info",
+    };
+  }
+  if (s === "pending")
+    return { text: "Chek tekshirilmoqda", dot: "bg-info" };
+  if (s === "expired")
+    return { text: "To'lov qiling", dot: "bg-error" };
+  return { text: "Holat aniqlanmoqda", dot: "bg-base-content/25" };
+}
+
+async function handleSwitchCenter(centerId) {
+  await biz.selectCenter(centerId);
+  mobileOpen.value = false;
+}
+
+function handleAddCenter() {
+  biz.beginCreateCenter();
+  mobileOpen.value = false;
+  router.push("/markazim");
+}
+
 watch(
   () => route.fullPath,
   () => {
@@ -51,6 +111,10 @@ async function handleLogout() {
     await auth.signOut();
   } finally {
     biz.reset();
+    market.reset();
+    inquiries.reset();
+    supportStore.reset();
+    moduleStore.reset();
     router.push("/login");
   }
 }
@@ -119,28 +183,58 @@ async function handleLogout() {
         </RouterLink>
       </nav>
 
-      <!-- Markaz holati -->
-      <div class="px-3 pb-3">
-        <div
-          v-if="biz.center"
-          class="rounded-2xl border border-base-content/10 bg-base-200/60 p-3.5">
-          <p class="truncate text-sm font-bold">{{ biz.center.name }}</p>
-          <p class="mt-1 flex items-center gap-1.5 text-xs">
-            <AppIcon
-              :name="biz.center.is_verified ? 'checkCircle' : 'hourglass'"
-              :size="13"
-              :class="
-                biz.center.is_verified ? 'text-success' : 'text-warning'
-              " />
-            <span class="opacity-70">
-              {{
-                biz.center.is_verified
-                  ? ui.t("center.verified")
-                  : ui.t("center.notVerified")
-              }}
-            </span>
+      <!-- Markazlar (switcher) -->
+      <div class="space-y-2 px-3 pb-3">
+        <template v-if="biz.centers.length">
+          <p
+            class="px-1 text-[10px] font-bold uppercase tracking-widest opacity-40">
+            Markazlarim
           </p>
-        </div>
+          <ul class="space-y-1.5">
+            <li v-for="centerItem in biz.centers" :key="centerItem.id">
+              <button
+                type="button"
+                class="flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors"
+                :class="
+                  centerItem.id === biz.center?.id
+                    ? 'border-primary/40 bg-primary/10'
+                    : 'border-transparent hover:bg-base-200/80'
+                "
+                @click="handleSwitchCenter(centerItem.id)">
+                <span
+                  class="size-2 shrink-0 rounded-full"
+                  :class="statusInfo(centerItem).dot" />
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-[13px] font-bold">{{
+                    centerItem.name
+                  }}</span>
+                  <span
+                    class="block truncate text-[11px] leading-tight opacity-60">
+                    {{ statusInfo(centerItem).text }}
+                  </span>
+                </span>
+                <span
+                  v-if="centerItem.is_extra_center"
+                  class="badge badge-ghost badge-xs shrink-0 opacity-70">
+                  qo'shimcha
+                </span>
+                <AppIcon
+                  v-if="centerItem.id === biz.center?.id"
+                  name="check"
+                  :size="14"
+                  class="shrink-0 text-primary" />
+              </button>
+            </li>
+          </ul>
+          <button
+            type="button"
+            class="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-primary/40 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10"
+            @click="handleAddCenter">
+            <AppIcon name="plus" :size="14" />
+            Yangi markaz qo'shish
+          </button>
+        </template>
+
         <RouterLink
           v-else
           to="/markazim"
@@ -213,6 +307,12 @@ async function handleLogout() {
             class="mt-1 flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors hover:bg-base-200">
             <AppIcon name="settings" :size="16" />
             {{ ui.t("nav.settings") }}
+          </RouterLink>
+          <RouterLink
+            to="/yordam"
+            class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors hover:bg-base-200">
+            <AppIcon name="mail" :size="16" />
+            Yordam
           </RouterLink>
           <button
             type="button"
