@@ -57,6 +57,28 @@ const routes = [
     },
   },
   {
+    path: "/panellar",
+    name: "panels",
+    component: () => import("../views/PanelsView.vue"),
+    meta: {
+      layout: "dashboard",
+      requiresOwner: true,
+      titleKey: "nav.panels",
+      title: "Tayyor panellar · FindTheWay Biznes",
+    },
+  },
+  {
+    path: "/panelim",
+    name: "workspace",
+    component: () => import("../views/PanelWorkspaceView.vue"),
+    meta: {
+      layout: "dashboard",
+      requiresOwner: true,
+      titleKey: "nav.workspace",
+      title: "Panelim · FindTheWay Biznes",
+    },
+  },
+  {
     path: "/yordam",
     name: "support",
     component: () => import("../views/SupportView.vue"),

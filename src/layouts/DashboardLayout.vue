@@ -8,6 +8,8 @@ import { useMarketStore } from "../stores/market";
 import { useInquiriesStore } from "../stores/inquiries";
 import { useSupportStore } from "../stores/support";
 import { useModulesStore } from "../stores/modules";
+import { usePanelsStore } from "../stores/panels";
+import { usePanelToolsStore } from "../stores/panelTools";
 import AppIcon from "../components/AppIcon.vue";
 import BaseDropdown from "../components/BaseDropdown.vue";
 import LocaleSwitcher from "../components/LocaleSwitcher.vue";
@@ -20,25 +22,56 @@ const market = useMarketStore();
 const inquiries = useInquiriesStore();
 const supportStore = useSupportStore();
 const moduleStore = useModulesStore();
+const panelStore = usePanelsStore();
+const wsStore = usePanelToolsStore();
 const route = useRoute();
 const router = useRouter();
 
 const mobileOpen = ref(false);
+const centersOpen = ref(true);
 
-const links = [
-  { to: "/", icon: "dashboard", key: "nav.dashboard" },
-  { to: "/arizalar", icon: "inbox", key: "nav.applications", badge: true },
-  { to: "/murojaatlar", icon: "mail", key: "nav.inquiries" },
-  { to: "/so-rovlar", icon: "message", key: "nav.market" },
-  { to: "/markazim", icon: "building", key: "nav.center" },
-  { to: "/kurslar", icon: "book", key: "nav.courses" },
-  { to: "/ai-yordamchi", icon: "sparkles", key: "nav.aiAssistant" },
-  { to: "/modullar", icon: "ticket", key: "nav.modules" },
-  { to: "/sozlamalar", icon: "settings", key: "nav.settings" },
-  { to: "/to-lov", icon: "wallet", key: "nav.payment" },
+// Navigatsiya bo'limlarga bo'lingan — panel tushunarli bo'lsin
+const sections = [
+  {
+    titleKey: "nav.sectionManage",
+    links: [
+      { to: "/", icon: "dashboard", key: "nav.dashboard" },
+      { to: "/arizalar", icon: "inbox", key: "nav.applications", badge: true },
+      { to: "/murojaatlar", icon: "mail", key: "nav.inquiries" },
+      { to: "/so-rovlar", icon: "message", key: "nav.market" },
+    ],
+  },
+  {
+    titleKey: "nav.sectionCenter",
+    links: [
+      { to: "/markazim", icon: "building", key: "nav.center" },
+      { to: "/kurslar", icon: "book", key: "nav.courses" },
+      { to: "/panelim", icon: "layers", key: "nav.workspace" },
+    ],
+  },
+  {
+    titleKey: "nav.sectionShop",
+    links: [
+      { to: "/panellar", icon: "briefcase", key: "nav.panels" },
+      { to: "/modullar", icon: "ticket", key: "nav.modules" },
+    ],
+  },
+  {
+    titleKey: "nav.sectionTools",
+    links: [
+      { to: "/ai-yordamchi", icon: "sparkles", key: "nav.aiAssistant" },
+      { to: "/to-lov", icon: "wallet", key: "nav.payment" },
+      { to: "/sozlamalar", icon: "settings", key: "nav.settings" },
+    ],
+  },
 ];
 
 const pageTitle = computed(() => ui.t(route.meta?.titleKey ?? "nav.dashboard"));
+
+// Faol markaz (yopilgan holatda ham ko'rinadi)
+const activeCenter = computed(
+  () => biz.center ?? biz.centers[0] ?? null,
+);
 
 const initials = computed(() => {
   const name = auth.displayName || "F";
@@ -115,6 +148,8 @@ async function handleLogout() {
     inquiries.reset();
     supportStore.reset();
     moduleStore.reset();
+    panelStore.reset();
+    wsStore.reset();
     router.push("/login");
   }
 }
@@ -162,35 +197,58 @@ async function handleLogout() {
         </button>
       </div>
 
-      <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-        <RouterLink
-          v-for="link in links"
-          :key="link.to"
-          :to="link.to"
-          class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors"
-          :class="
-            route.path === link.to
-              ? 'bg-primary/12 text-primary'
-              : 'text-base-content/70 hover:bg-base-200 hover:text-base-content'
-          ">
-          <AppIcon :name="link.icon" :size="18" />
-          <span class="flex-1">{{ ui.t(link.key) }}</span>
-          <span
-            v-if="link.badge && biz.newCount"
-            class="badge badge-primary badge-sm font-bold">
-            {{ biz.newCount }}
-          </span>
-        </RouterLink>
+      <nav class="flex-1 space-y-4 overflow-y-auto px-3 py-2">
+        <div v-for="section in sections" :key="section.titleKey">
+          <p
+            class="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-widest opacity-40">
+            {{ ui.t(section.titleKey) }}
+          </p>
+          <div class="space-y-1">
+            <RouterLink
+              v-for="link in section.links"
+              :key="link.to"
+              :to="link.to"
+              class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors"
+              :class="
+                route.path === link.to
+                  ? 'bg-primary/12 text-primary'
+                  : 'text-base-content/70 hover:bg-base-200 hover:text-base-content'
+              ">
+              <AppIcon :name="link.icon" :size="18" />
+              <span class="flex-1">{{ ui.t(link.key) }}</span>
+              <span
+                v-if="link.badge && biz.newCount"
+                class="badge badge-primary badge-sm font-bold">
+                {{ biz.newCount }}
+              </span>
+            </RouterLink>
+          </div>
+        </div>
       </nav>
 
-      <!-- Markazlar (switcher) -->
+      <!-- Markazlar (switcher) — yig'iladigan: dashboard to'silmaydi -->
       <div class="space-y-2 px-3 pb-3">
         <template v-if="biz.centers.length">
-          <p
-            class="px-1 text-[10px] font-bold uppercase tracking-widest opacity-40">
-            Markazlarim
-          </p>
-          <ul class="space-y-1.5">
+          <button
+            type="button"
+            class="flex w-full items-center justify-between px-1"
+            :aria-expanded="centersOpen"
+            @click="centersOpen = !centersOpen">
+            <p
+              class="text-[10px] font-bold uppercase tracking-widest opacity-40">
+              Markazlarim · {{ biz.centers.length }} ta
+            </p>
+            <AppIcon
+              name="chevronDown"
+              :size="14"
+              class="opacity-50 transition-transform"
+              :class="centersOpen ? '' : '-rotate-90'" />
+          </button>
+
+          <!-- Ochiq holat: ro'yxat (ko'p markazda skrollanadi) -->
+          <ul
+            v-if="centersOpen"
+            class="max-h-44 space-y-1.5 overflow-y-auto pr-1">
             <li v-for="centerItem in biz.centers" :key="centerItem.id">
               <button
                 type="button"
@@ -226,7 +284,24 @@ async function handleLogout() {
               </button>
             </li>
           </ul>
+
+          <!-- Yopilgan holat: faqat faol markaz qatori -->
           <button
+            v-else
+            type="button"
+            class="flex w-full items-center gap-2.5 rounded-xl border border-primary/40 bg-primary/8 px-3 py-2.5 text-left"
+            @click="centersOpen = true">
+            <span
+              class="size-2 shrink-0 rounded-full"
+              :class="statusInfo(activeCenter).dot" />
+            <span class="min-w-0 flex-1 truncate text-[13px] font-bold">
+              {{ activeCenter?.name }}
+            </span>
+            <AppIcon name="chevronDown" :size="14" class="-rotate-90 opacity-50" />
+          </button>
+
+          <button
+            v-if="centersOpen"
             type="button"
             class="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-primary/40 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10"
             @click="handleAddCenter">

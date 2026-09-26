@@ -147,17 +147,24 @@ onMounted(async () => {
               <span class="text-[11px] font-semibold opacity-50">so'm / oy</span>
             </p>
 
-            <!-- Faol: davr oxiri -->
-            <p
-              v-if="statusOf(module) === 'active'"
-              class="mt-1 text-[11px] opacity-50">
-              {{
-                modules.getModule(module.id)?.paid_until
-                  ? 'Amal qilish muddati: ' +
-                    formatUntil(modules.getModule(module.id).paid_until)
-                  : 'Faol'
-              }}
-            </p>
+            <!-- Faol: davr oxiri + ish maydonini ochish -->
+            <template v-if="statusOf(module) === 'active'">
+              <p class="mt-1 text-[11px] opacity-50">
+                {{
+                  modules.getModule(module.id)?.paid_until
+                    ? 'Amal qilish muddati: ' +
+                      formatUntil(modules.getModule(module.id).paid_until)
+                    : 'Faol'
+                }}
+              </p>
+              <RouterLink
+                v-if="module.tool"
+                :to="{ path: '/panelim', query: { tool: module.tool } }"
+                class="btn btn-primary btn-sm mt-2 w-full rounded-xl">
+                <AppIcon name="columns" :size="14" />
+                Ish maydonini ochish
+              </RouterLink>
+            </template>
 
             <!-- Sotib olish -->
             <div v-else-if="!buying[module.id]" class="mt-3">
