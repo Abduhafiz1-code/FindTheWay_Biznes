@@ -42,13 +42,19 @@ export const TOOLS = {
     ],
     columns: [
       { key: "full_name", label: "Ism" },
-      { key: "phone", label: "Telefon" },
+      { key: "phone", label: "Telefon", phone: true },
       { key: "course", label: "Kurs" },
       {
         key: "status",
         label: "Holat",
         badge: { yangi: "badge-ghost", kontaktda: "badge-info", qabul: "badge-success" },
         badgeText: { yangi: "Yangi", kontaktda: "Kontaktda", qabul: "Qabul qilingan" },
+        editable: true,
+        editOptions: [
+          { v: "yangi", l: "Yangi" },
+          { v: "kontaktda", l: "Kontaktda" },
+          { v: "qabul", l: "Qabul qilingan" },
+        ],
       },
       { key: "note", label: "Izoh" },
       { key: "created_at", label: "Sana", type: "date" },
@@ -87,6 +93,7 @@ export const TOOLS = {
     kind: "table",
     table: "panel_payments",
     hint: "Har bir to'lov qabuli: kim, qancha, qachon va turi.",
+    summary: "finance",
     fields: [
       { key: "student", label: "O'quvchi", required: true },
       { key: "amount", label: "Summa (so'm)", type: "number", required: true },
@@ -465,6 +472,95 @@ export const usePanelToolsStore = defineStore("panelTools", () => {
     );
   }
 
+  /** Yozuvni tahrirlash (holat o'zgartirish, izoh va h.k.) */
+  async function update(toolKey, id, patch) {
+    const cfg = TOOLS[toolKey];
+    if (!cfg?.table) throw new Error("Bu bo'lim uchun jadval yo'q");
+    const biz = useBizStore();
+    if (!biz.center?.id) throw new Error("Avval markaz tanlang");
+
+    saving.value = true;
+    lastError.value = "";
+    try {
+      const { data: row, error } = await supabase
+        .from(cfg.table)
+        .update(patch)
+        .eq("id", id)
+        .eq("center_id", biz.center.id)
+        .select("*")
+        .single();
+      if (error) {
+        lastError.value = error.message;
+        throw error;
+      }
+      const list = data[cfg.table] ?? [];
+      const index = list.findIndex((r) => r.id === id);
+      if (index !== -1) list[index] = row;
+      await logAudit("Tahrirlandi", `${cfg.label}: ${rowTitle(cfg, row)}`);
+      return row;
+    } finally {
+      saving.value = false;
+    }
+  }
+
+  /** Kassa jamlamasi — kunlik/oylik/jami + qarzdorlar CRM'dan */
+  const financeSummary = computed(() => {
+    const payments = data["panel_payments"] ?? [];
+    const now = new Date();
+    const sum = (list) => list.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+
+    const todayStr = now.toISOString().slice(0, 10);
+    const month = (list) =>
+      list.filter((p) => {
+        const d = new Date(p.paid_on || p.created_at);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      });
+
+    const students = data["panel_students"] ?? [];
+    const debtors = students.filter((s) => s.status === "qabul").length;
+
+    return {
+      today: sum(payments.filter((p) => (p.paid_on || "") === todayStr)),
+      month: sum(month(payments)),
+      total: sum(payments),
+      countToday: payments.filter((p) => (p.paid_on || "") === todayStr).length,
+      countMonth: month(payments).length,
+      debtors,
+    };
+  });
+
+  /** CSV eksport — jadvaldagi ko'rinadigan ustunlar bilan */
+  function exportCsv(toolKey) {
+    const cfg = TOOLS[toolKey];
+    if (!cfg?.table) return;
+    const rows = data[cfg.table] ?? [];
+    if (!rows.length) return;
+
+    const cols = (cfg.columns ?? []).filter((c) => !c.phone);
+    const header = cols.map((c) => c.label).join(";");
+    const lines = rows.map((row) =>
+      cols
+        .map((c) => {
+          const v = row[c.key];
+          if (v === null || v === undefined) return "";
+          const text = c.type === "date"
+            ? new Date(v).toLocaleDateString("uz-UZ")
+            : String(v);
+          return `"${text.replace(/"/g, '""')}"`;
+        })
+        .join(";"),
+    );
+    const csv = "\uFEFF" + [header, ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${cfg.label.replace(/\s+/g, "-").toLowerCase()}-${today()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    logAudit("Eksport", `${cfg.label}: ${rows.length} yozuv CSV`);
+  }
+
   async function add(toolKey, payload) {
     const cfg = TOOLS[toolKey];
     if (!cfg?.table) throw new Error("Bu bo'lim uchun jadval yo'q");
@@ -572,11 +668,14 @@ export const usePanelToolsStore = defineStore("panelTools", () => {
     lastError,
     hasAnything,
     analytics,
+    financeSummary,
     load,
     loadData,
     rowsOf,
     add,
+    update,
     remove,
+    exportCsv,
     reset,
   };
 });

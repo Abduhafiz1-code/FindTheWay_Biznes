@@ -14,6 +14,9 @@ const active = ref("");
 const form = reactive({});
 const message = ref("");
 const messageType = ref("success"); // success | error
+const query = ref("");
+const editingId = ref(null);
+const editingPatch = reactive({});
 
 const TIERS = {
   mini: { label: "Mini", cls: "badge-ghost" },
@@ -31,6 +34,63 @@ const current = computed(() => TOOLS[active.value] ?? null);
 const rows = computed(() =>
   current.value?.table ? ws.rowsOf(active.value) : [],
 );
+
+// Qidiruv — barcha maydonlar bo'yicha
+const filteredRows = computed(() => {
+  const q = query.value.trim().toLowerCase();
+  if (!q) return rows.value;
+  return rows.value.filter((row) =>
+    Object.values(row).some(
+      (v) =>
+        v !== null &&
+        v !== undefined &&
+        String(v).toLowerCase().includes(q),
+    ),
+  );
+});
+
+function startEdit(row) {
+  editingId.value = row.id;
+  Object.keys(editingPatch).forEach((k) => delete editingPatch[k]);
+  (current.value?.columns ?? [])
+    .filter((c) => c.editable)
+    .forEach((c) => {
+      editingPatch[c.key] = row[c.key];
+    });
+}
+
+async function saveEdit(row) {
+  try {
+    await ws.update(active.value, row.id, { ...editingPatch });
+    message.value = "Yangilandi.";
+    messageType.value = "success";
+    editingId.value = null;
+  } catch (error) {
+    message.value = error?.message || "Xatolik yuz berdi.";
+    messageType.value = "error";
+  }
+}
+
+function telHref(value) {
+  const digits = String(value ?? "").replace(/[^0-9+]/g, "");
+  return digits ? `tel:${digits}` : "";
+}
+
+// Marketing: SMS/Telegram tez xabar
+const blastText = ref("");
+const crmPhones = computed(() =>
+  ws.rowsOf("crm").filter((s) => s.phone),
+);
+function smsHref(phone, text) {
+  const digits = String(phone ?? "").replace(/[^0-9+]/g, "");
+  return `sms:${digits}?body=${encodeURIComponent(text || "")}`;
+}
+function tgHref(phone, text) {
+  let digits = String(phone ?? "").replace(/[^0-9]/g, "");
+  if (digits.startsWith("998") && digits.length > 9)
+    digits = digits.slice(-9);
+  return `https://t.me/+998${digits}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
+}
 
 function initForm() {
   Object.keys(form).forEach((k) => delete form[k]);
@@ -51,6 +111,8 @@ function initForm() {
 function pickTool(key) {
   if (!TOOLS[key]) return;
   active.value = key;
+  query.value = "";
+  editingId.value = null;
   router.replace({ query: { ...route.query, tool: key } });
 }
 
@@ -226,8 +288,58 @@ onMounted(async () => {
 
       <!-- ====== TABLE (CRUD) ====== -->
       <template v-if="current?.kind === 'table'">
+        <!-- Kassa jamlamasi -->
+        <div v-if="current.summary === 'finance'" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Bugungi tushum"
+            :value="formatMoney(ws.financeSummary.today)"
+            suffix="so'm"
+            icon="wallet"
+            tone="success" />
+          <StatCard
+            label="Shu oy"
+            :value="formatMoney(ws.financeSummary.month)"
+            suffix="so'm"
+            icon="trending"
+            tone="primary" />
+          <StatCard
+            label="Jami"
+            :value="formatMoney(ws.financeSummary.total)"
+            suffix="so'm"
+            icon="chart"
+            tone="info" />
+          <StatCard
+            label="Qabul qilinganlar"
+            :value="ws.financeSummary.debtors"
+            icon="users"
+            tone="secondary" />
+        </div>
+
         <div class="ftw-card p-5">
           <p class="text-sm opacity-60">{{ current.hint }}</p>
+
+          <!-- Qidiruv + eksport -->
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <div class="relative min-w-56 flex-1">
+              <AppIcon
+                name="search"
+                :size="15"
+                class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 opacity-40" />
+              <input
+                v-model="query"
+                type="search"
+                placeholder="Qidirish..."
+                class="input input-bordered input-sm w-full rounded-xl pl-9 text-sm" />
+            </div>
+            <button
+              type="button"
+              class="btn btn-outline btn-sm rounded-xl"
+              :disabled="!rows.length"
+              @click="ws.exportCsv(active.value ?? active)">
+              <AppIcon name="download" :size="14" />
+              Excel (CSV)
+            </button>
+          </div>
 
           <!-- Form (read-only audit uchun form yo'q) -->
           <form
@@ -296,17 +408,43 @@ onMounted(async () => {
               </tr>
             </thead>
             <tbody>
-              <tr v-if="!rows.length">
+              <tr v-if="!filteredRows.length">
                 <td
                   :colspan="current.columns.length + (current.readOnly ? 0 : 1)"
                   class="py-8 text-center text-sm opacity-50">
-                  Hozircha ma'lumot yo'q — yuqoridan qo'shing.
+                  {{
+                    rows.length
+                      ? "Qidiruv natijasi yo'q."
+                      : "Hozircha ma'lumot yo'q — yuqoridan qo'shing."
+                  }}
                 </td>
               </tr>
-              <tr v-for="row in rows" :key="row.id">
+              <tr v-for="row in filteredRows" :key="row.id">
                 <td v-for="col in current.columns" :key="col.key">
+                  <!-- Tahrirlanadigan holat (select) -->
+                  <select
+                    v-if="editingId === row.id && col.editable"
+                    v-model="editingPatch[col.key]"
+                    class="select select-bordered select-xs w-full rounded-lg text-xs">
+                    <option
+                      v-for="opt in col.editOptions"
+                      :key="opt.v"
+                      :value="opt.v">
+                      {{ opt.l }}
+                    </option>
+                  </select>
+
+                  <!-- Telefon: qo'ng'iroq tugmasi -->
+                  <a
+                    v-else-if="col.phone && row[col.key]"
+                    :href="telHref(row[col.key])"
+                    class="inline-flex items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-sm font-semibold text-primary hover:bg-primary/10">
+                    {{ row[col.key] }}
+                    <AppIcon name="phone" :size="12" />
+                  </a>
+
                   <span
-                    v-if="col.badge"
+                    v-else-if="col.badge"
                     class="badge badge-sm"
                     :class="col.badge[row[col.key]] ?? 'badge-ghost'">
                     {{ col.badgeText?.[row[col.key]] ?? cellText(col, row) }}
@@ -314,12 +452,38 @@ onMounted(async () => {
                   <span v-else class="text-sm">{{ cellText(col, row) }}</span>
                 </td>
                 <td v-if="!current.readOnly" class="text-right">
-                  <button
-                    type="button"
-                    class="btn btn-ghost btn-xs text-error"
-                    @click="onDelete(row)">
-                    <AppIcon name="trash" :size="14" />
-                  </button>
+                  <template v-if="editingId === row.id">
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-xs text-success"
+                      title="Saqlash"
+                      @click="saveEdit(row)">
+                      <AppIcon name="check" :size="14" />
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-xs"
+                      title="Bekor"
+                      @click="editingId = null">
+                      <AppIcon name="close" :size="14" />
+                    </button>
+                  </template>
+                  <template v-else>
+                    <button
+                      v-if="(current.columns ?? []).some((c) => c.editable)"
+                      type="button"
+                      class="btn btn-ghost btn-xs"
+                      title="Tahrirlash"
+                      @click="startEdit(row)">
+                      <AppIcon name="pencil" :size="14" />
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-xs text-error"
+                      @click="onDelete(row)">
+                      <AppIcon name="trash" :size="14" />
+                    </button>
+                  </template>
                 </td>
               </tr>
             </tbody>
@@ -376,6 +540,68 @@ onMounted(async () => {
             :value="ws.analytics.campaigns"
             icon="send"
             tone="secondary" />
+        </div>
+      </template>
+
+      <!-- ====== MARKETING YUBORISH (SMS/Telegram tez xabar) ====== -->
+      <template v-else-if="active === 'marketing'">
+        <div class="ftw-card space-y-4 p-5">
+          <div>
+            <h3 class="font-bold">Tez xabar yuborish</h3>
+            <p class="mt-0.5 text-sm opacity-60">
+              O'quvchilaringizga SMS yoki Telegram orqali xabar tayyorlang —
+              har bir o'quvchi uchun yuborish tugmasi shakllanadi.
+            </p>
+          </div>
+          <textarea
+            v-model="blastText"
+            rows="3"
+            class="textarea textarea-bordered w-full rounded-xl text-sm"
+            placeholder="Masalan: Assalomu alaykum! Ertaga 15:00 da dars bo'ladi." />
+          <p class="text-xs opacity-55">
+            {{ blastText.length }} belgi. Kampaniya jadvalda «Rejada» holatida
+            saqlanadi.
+          </p>
+
+          <div v-if="crmPhones.length" class="space-y-2">
+            <p class="text-xs font-bold uppercase tracking-wider opacity-50">
+              O'quvchilar ({{ crmPhones.length }})
+            </p>
+            <div class="max-h-64 space-y-1.5 overflow-y-auto pr-1">
+              <div
+                v-for="student in crmPhones"
+                :key="student.id"
+                class="flex items-center gap-3 rounded-xl border border-base-content/10 px-3 py-2">
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-bold">{{ student.full_name }}</p>
+                  <p class="truncate text-xs opacity-55">{{ student.phone }}</p>
+                </div>
+                <a
+                  :href="smsHref(student.phone, blastText)"
+                  class="btn btn-outline btn-xs rounded-lg"
+                  title="SMS yuborish">
+                  SMS
+                </a>
+                <a
+                  :href="tgHref(student.phone, blastText)"
+                  target="_blank"
+                  rel="noopener"
+                  class="btn btn-primary btn-xs rounded-lg"
+                  title="Telegram yuborish">
+                  Telegram
+                </a>
+              </div>
+            </div>
+            <p class="text-xs leading-relaxed opacity-55">
+              Tugma bosilganda telefon ilovasi ochiladi va matn tayyor
+              bo'ladi — yuborishni tasdiqlaysiz. Xarajat va qamrov
+              kampaniya jadvalida kuzatiladi.
+            </p>
+          </div>
+          <p v-else class="text-sm opacity-55">
+            Avval Talabalar bazasiga o'quvchilarni qo'shing — telefonlari
+            shu yerda paydo bo'ladi.
+          </p>
         </div>
       </template>
 

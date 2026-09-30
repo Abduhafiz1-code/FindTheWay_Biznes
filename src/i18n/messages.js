@@ -61,6 +61,13 @@ export const messages = {
       language: 'Til',
       theme: 'Mavzu',
     },
+    trust: {
+      registerTitle: 'Ro\'yxatdan o\'tish bepul va xavfsiz',
+      freeTrial: '30 kun bepul sinov — hozir hech qanday to\'lov yo\'q',
+      noCard: 'Karta ma\'lumotlarini kiritishingiz shart emas',
+      dataIsolated: 'Markazingiz ma\'lumotlari faqat sizga tegishli — boshqalar ko\'rmaydi',
+      loginSecure: 'Ma\'lumotlaringiz shifrlangan (Supabase) saqlanadi. To\'lovni faqat "To\'lov" sahifasidagi rasmiy kartaga qiling — hech kim SMS kod yoki parol so\'ramaydi.',
+    },
     auth: {
       loginTitle: 'Xush kelibsiz',
       loginSubtitle: 'Markazingiz hisobiga kiring',
@@ -290,6 +297,13 @@ export const messages = {
       account: 'Account',
       language: 'Language',
       theme: 'Theme',
+    },
+    trust: {
+      registerTitle: 'Registration is free and safe',
+      freeTrial: '30-day free trial — no payment right now',
+      noCard: 'No card details required',
+      dataIsolated: 'Your center\'s data belongs only to you — nobody else can see it',
+      loginSecure: 'Your data is stored encrypted (Supabase). Pay only to the official card shown on the Payment page — nobody will ever ask for your SMS code or password.',
     },
     auth: {
       loginTitle: 'Welcome back',

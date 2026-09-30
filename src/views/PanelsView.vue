@@ -5,6 +5,7 @@ import { useBizStore } from "../stores/biz";
 import { usePanelsStore } from "../stores/panels";
 import { TOOLS, TOOL_ORDER } from "../stores/panelTools";
 import AppIcon from "../components/AppIcon.vue";
+import PaymentInfo from "../components/PaymentInfo.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 
 const biz = useBizStore();
@@ -31,6 +32,33 @@ function toolNames(panel) {
     .map((key) => TOOLS[key]?.label)
     .filter(Boolean);
 }
+
+/** Har bir ish maydoni uchun nima qilish mumkinligi (aniq va'da) */
+function toolHints(panel) {
+  return (panel.tools ?? [])
+    .map((key) => ({
+      icon: TOOLS[key]?.icon,
+      label: TOOLS[key]?.label,
+      promise: PROMISES[key],
+    }))
+    .filter((t) => t.label && t.promise);
+}
+
+// Sotib olingach aynan nima ochiladi — ko'rinadigan, tekshiriladigan va'dalar
+const PROMISES = {
+  crm: "O'quvchi qo'shish, qidirish, holatini o'zgartirish, qo'ng'iroq qilish",
+  schedule: "Guruh yaratish, o'qituvchi va vaqt belgilash, xonani ko'rsatish",
+  finance: "To'lov kiritish, bugungi/oylik/jami tushumni ko'rish, Excel eksport",
+  staff: "Xodim qo'shish, rol va maosh belgilash",
+  attendance: "Kunlik kelgan/kelmagan sonini yozib borish",
+  tests: "Test natijasini kiritish, o'rtacha ballni ko'rish",
+  marketing: "SMS va Telegram xabar tayyorlash, yuborish tugmalari",
+  materials: "Darslik va havolalarni saqlash, guruhga biriktirish",
+  analytics: "Tushum, o'quvchi, davomat va ball statistikasi",
+  audit: "Panel ichidagi barcha harakatlar tarixi",
+  "service-chat": "O'quvchi murojaatlarini javoblash sahifasi",
+  website: "Markaz sahifasini tahrirlash (kurslar, manzil, ariza)",
+};
 
 function chooseFile(event, panel) {
   files[panel.id] = event.target.files?.[0] || null;
@@ -165,19 +193,23 @@ onMounted(async () => {
             </span>
           </div>
 
-          <!-- Ish maydonlari -->
-          <div v-if="toolNames(panel).length" class="mt-3">
+          <!-- Sotib olingach NIMA ochiladi (aniq va'dalar) -->
+          <div v-if="toolHints(panel).length" class="mt-3">
             <p class="text-[10px] font-bold uppercase tracking-widest opacity-45">
-              Ish maydonlari
+              Sotib olingach shular ochiladi
             </p>
-            <div class="mt-1.5 flex flex-wrap gap-1.5">
-              <span
-                v-for="name in toolNames(panel)"
-                :key="name"
-                class="badge badge-ghost badge-sm">
-                {{ name }}
-              </span>
-            </div>
+            <ul class="mt-2 space-y-2">
+              <li
+                v-for="tool in toolHints(panel)"
+                :key="tool.label"
+                class="flex items-start gap-2 rounded-lg bg-base-200/50 px-2.5 py-1.5">
+                <AppIcon :name="tool.icon" :size="13" class="mt-0.5 shrink-0 text-primary" />
+                <span class="text-xs leading-snug">
+                  <span class="font-bold">{{ tool.label }}:</span>
+                  <span class="opacity-70">{{ tool.promise }}</span>
+                </span>
+              </li>
+            </ul>
           </div>
 
           <ul class="mt-3 space-y-1.5">
@@ -223,6 +255,7 @@ onMounted(async () => {
             </div>
 
             <div v-else class="mt-3 space-y-2">
+              <PaymentInfo :amount="panel.price_monthly" />
               <label
                 class="btn btn-outline btn-sm w-full rounded-xl"
                 :class="files[panel.id] ? 'btn-primary' : ''">

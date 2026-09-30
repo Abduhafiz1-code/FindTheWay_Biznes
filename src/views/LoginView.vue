@@ -158,6 +158,13 @@ async function handleGoogle() {
 
       <GoogleButton :label="ui.t('auth.google')" :loading="loading" @click="handleGoogle" />
 
+      <!-- ISHONCH: xavfsiz ulanish va himoyalangan ma'lumot -->
+      <div
+        class="mt-6 flex items-start gap-2.5 rounded-xl border border-base-content/12 bg-base-200/50 px-3.5 py-3 text-xs leading-relaxed opacity-75">
+        <AppIcon name="shield" :size="15" class="mt-0.5 shrink-0 text-success" />
+        <span>{{ ui.t('trust.loginSecure') }}</span>
+      </div>
+
       <p class="mt-6 text-center text-sm opacity-70">
         {{ ui.t('auth.noAccount') }}
         <RouterLink to="/register" class="font-bold text-primary hover:underline">

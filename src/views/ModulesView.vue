@@ -4,6 +4,7 @@ import { RouterLink } from "vue-router";
 import { useBizStore } from "../stores/biz";
 import { useModulesStore } from "../stores/modules";
 import AppIcon from "../components/AppIcon.vue";
+import PaymentInfo from "../components/PaymentInfo.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 
 const biz = useBizStore();
@@ -24,6 +25,25 @@ function statusOf(module) {
   if (row?.status === "pending") return "pending";
   if (row?.status === "expired") return "expired";
   return "none";
+}
+
+// Sotib olingach aynan nima ochiladi — har bir modul uchun aniq va'da
+const TOOL_PROMISES = {
+  crm: "O'quvchi qo'shish, qidirish, holatini o'zgartirish, qo'ng'iroq qilish, Excel eksport",
+  schedule: "Guruh yaratish, o'qituvchi va vaqt belgilash, xonani ko'rsatish",
+  finance: "To'lov kiritish, bugungi/oylik/jami tushumni ko'rish, Excel eksport",
+  staff: "Xodim qo'shish, rol va maosh belgilash",
+  attendance: "Kunlik kelgan/kelmagan sonini yozib borish",
+  tests: "Test natijasini kiritish, o'rtacha ballni ko'rish",
+  marketing: "SMS va Telegram xabar tayyorlash, yuborish tugmalari",
+  materials: "Darslik va havolalarni saqlash, guruhga biriktirish",
+  analytics: "Tushum, o'quvchi, davomat va ball statistikasi",
+  "service-chat": "O'quvchi murojaatlarini javoblash sahifasi",
+  website: "Markaz sahifasini tahrirlash (kurslar, manzil, ariza)",
+};
+
+function toolPromise(module) {
+  return module.tool ? TOOL_PROMISES[module.tool] : null;
 }
 
 async function startBuy(module) {
@@ -141,6 +161,17 @@ onMounted(async () => {
             </li>
           </ul>
 
+          <!-- Sotib olingach aniq nima bo'ladi -->
+          <p
+            v-if="toolPromise(module)"
+            class="mt-3 flex items-start gap-2 rounded-lg bg-base-200/50 px-2.5 py-1.5 text-xs leading-snug">
+            <AppIcon name="columns" :size="13" class="mt-0.5 shrink-0 text-primary" />
+            <span>
+              <span class="font-bold">Sotib olingach:</span>
+              <span class="opacity-70">{{ toolPromise(module) }}</span>
+            </span>
+          </p>
+
           <div class="mt-auto pt-4">
             <p class="text-lg font-black">
               {{ formatPrice(module.price_monthly) }}
@@ -185,6 +216,7 @@ onMounted(async () => {
 
             <!-- Chek yuklash formasi -->
             <div v-else class="mt-3 space-y-2">
+              <PaymentInfo :amount="module.price_monthly" />
               <label
                 class="btn btn-outline btn-sm w-full rounded-xl"
                 :class="files[module.id] ? 'btn-primary' : ''">

@@ -229,6 +229,29 @@ async function handleGoogle() {
         </button>
       </form>
 
+      <!-- ISHONCH: 30 kun bepul, karta shart emas -->
+      <div
+        class="mt-6 rounded-2xl border border-success/25 bg-success/8 p-4 text-sm leading-relaxed">
+        <p class="flex items-center gap-2 font-bold text-success">
+          <AppIcon name="shield" :size="16" />
+          {{ ui.t('trust.registerTitle') }}
+        </p>
+        <ul class="mt-2 space-y-1.5 opacity-75">
+          <li class="flex items-start gap-2">
+            <AppIcon name="check" :size="14" class="mt-0.5 shrink-0 text-success" />
+            {{ ui.t('trust.freeTrial') }}
+          </li>
+          <li class="flex items-start gap-2">
+            <AppIcon name="check" :size="14" class="mt-0.5 shrink-0 text-success" />
+            {{ ui.t('trust.noCard') }}
+          </li>
+          <li class="flex items-start gap-2">
+            <AppIcon name="check" :size="14" class="mt-0.5 shrink-0 text-success" />
+            {{ ui.t('trust.dataIsolated') }}
+          </li>
+        </ul>
+      </div>
+
       <div class="my-5 flex items-center gap-3 text-xs uppercase tracking-widest opacity-45">
         <span class="h-px flex-1 bg-base-content/15" />
         {{ ui.t('auth.or') }}

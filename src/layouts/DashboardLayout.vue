@@ -28,7 +28,27 @@ const route = useRoute();
 const router = useRouter();
 
 const mobileOpen = ref(false);
-const centersOpen = ref(true);
+// Markazlar ro'yxati yopiq holatda boshlanadi (dashboard to'silmasin)
+// va foydalanuvchi tanlovi eslab qolinadi.
+const CENTERS_OPEN_KEY = "ftw_centers_open";
+const centersOpen = ref(
+  (() => {
+    try {
+      return localStorage.getItem(CENTERS_OPEN_KEY) === "1";
+    } catch {
+      return false;
+    }
+  })(),
+);
+
+function toggleCenters() {
+  centersOpen.value = !centersOpen.value;
+  try {
+    localStorage.setItem(CENTERS_OPEN_KEY, centersOpen.value ? "1" : "0");
+  } catch {
+    /* localStorage mavjud bo'lmasa jim o'tamiz */
+  }
+}
 
 // Navigatsiya bo'limlarga bo'lingan — panel tushunarli bo'lsin
 const sections = [
@@ -233,7 +253,7 @@ async function handleLogout() {
             type="button"
             class="flex w-full items-center justify-between px-1"
             :aria-expanded="centersOpen"
-            @click="centersOpen = !centersOpen">
+            @click="toggleCenters">
             <p
               class="text-[10px] font-bold uppercase tracking-widest opacity-40">
               Markazlarim · {{ biz.centers.length }} ta
@@ -290,7 +310,7 @@ async function handleLogout() {
             v-else
             type="button"
             class="flex w-full items-center gap-2.5 rounded-xl border border-primary/40 bg-primary/8 px-3 py-2.5 text-left"
-            @click="centersOpen = true">
+            @click="toggleCenters">
             <span
               class="size-2 shrink-0 rounded-full"
               :class="statusInfo(activeCenter).dot" />
