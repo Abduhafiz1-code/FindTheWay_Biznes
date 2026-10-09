@@ -4,8 +4,6 @@ O'quv markazlari egalari uchun FindTheWay boshqaruv paneli. Markaz profili, kurs
 
 ## Ishga tushirish
 
-######### test
-
 ```bash
 npm install
 npm run dev
@@ -30,9 +28,12 @@ Production Branch: main
 
 Supabase Edge Functions uchun `GROQ_API_KEY` va `TELEGRAM_BOT_TOKEN` qiymatlarini Supabase Secrets orqali qo'shing. Ularni hech qachon front-end `.env` fayliga yozmang.
 
+Vercel'da esa `CRON_SECRET` muhit o'zgaruvchisini qo'shing — `/api/cron/subscriptions` cron so'rovlarini shu sir bilan tekshiradi (Vercel cron uni avtomatik yuboradi).
+
 Deploy qilinadigan funksiyalar:
 
 ```text
 ai-chat
 send-reminder
+polish-message
 ```

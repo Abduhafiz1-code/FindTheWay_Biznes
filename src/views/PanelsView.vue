@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, watch, onMounted } from "vue";
+import { reactive, computed, watch, onMounted } from "vue";
 import { RouterLink } from "vue-router";
 import { useBizStore } from "../stores/biz";
 import { usePanelsStore } from "../stores/panels";
@@ -37,6 +37,7 @@ function toolNames(panel) {
 function toolHints(panel) {
   return (panel.tools ?? [])
     .map((key) => ({
+      key,
       icon: TOOLS[key]?.icon,
       label: TOOLS[key]?.label,
       promise: PROMISES[key],
@@ -44,9 +45,24 @@ function toolHints(panel) {
     .filter((t) => t.label && t.promise);
 }
 
+/** Hozir ochiq bo'lgan maydonlar (faol panellar + modullar) */
+const openTools = computed(() => {
+  const set = new Set();
+  panels.mine
+    .filter((p) => panels.isActive(p.panel_id))
+    .forEach((p) => (p.panel_products?.tools ?? []).forEach((t) => set.add(t)));
+  return set;
+});
+
+/** Bu panel sotib olingach Hozirgidan qo'shimcha ochiladigan maydonlar */
+function extraTools(panel) {
+  return (panel.tools ?? []).filter((t) => !openTools.value.has(t));
+}
+
 // Sotib olingach aynan nima ochiladi — ko'rinadigan, tekshiriladigan va'dalar
 const PROMISES = {
   crm: "O'quvchi qo'shish, qidirish, holatini o'zgartirish, qo'ng'iroq qilish",
+  branches: "Filial qo'shish, filialga talaba/to'lov biriktirish, filiallar kesimida hisobot",
   schedule: "Guruh yaratish, o'qituvchi va vaqt belgilash, xonani ko'rsatish",
   finance: "To'lov kiritish, bugungi/oylik/jami tushumni ko'rish, Excel eksport",
   staff: "Xodim qo'shish, rol va maosh belgilash",
@@ -169,6 +185,11 @@ onMounted(async () => {
                 <span class="badge badge-sm shrink-0" :class="tierOf(panel).cls">
                   {{ tierOf(panel).label }}
                 </span>
+                <span
+                  class="badge badge-ghost badge-sm shrink-0"
+                  :title="(panel.tools ?? []).length + ' ta ish maydoni'">
+                  {{ (panel.tools ?? []).length }} ta maydon
+                </span>
               </div>
               <p class="mt-0.5 text-xs font-semibold opacity-60">
                 {{ panel.short }}
@@ -197,6 +218,11 @@ onMounted(async () => {
           <div v-if="toolHints(panel).length" class="mt-3">
             <p class="text-[10px] font-bold uppercase tracking-widest opacity-45">
               Sotib olingach shular ochiladi
+              <span
+                v-if="extraTools(panel).length && openTools.size"
+                class="ml-1 normal-case text-primary">
+                (hozirgidan +{{ extraTools(panel).length }} ta yangi)
+              </span>
             </p>
             <ul class="mt-2 space-y-2">
               <li
@@ -207,6 +233,11 @@ onMounted(async () => {
                 <span class="text-xs leading-snug">
                   <span class="font-bold">{{ tool.label }}:</span>
                   <span class="opacity-70">{{ tool.promise }}</span>
+                  <span
+                    v-if="openTools.size && !openTools.has(tool.key)"
+                    class="badge badge-primary badge-xs ml-1 align-middle">
+                    yangi
+                  </span>
                 </span>
               </li>
             </ul>

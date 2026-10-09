@@ -123,19 +123,17 @@ export const useAiStore = defineStore("ai", () => {
         throw new Error(result?.error || "AI javob qaytarmadi.");
       }
 
-      // 3) Save assistant response
-      const { data: assistantMsg, error: assistantError } = await supabase
-        .from("ai_messages")
-        .insert({
-          conversation_id: currentConversation.value.id,
-          role: "assistant",
-          content: result.message,
-          tokens_used: result.tokens_used || 0,
-        })
-        .select()
-        .single();
-
-      if (assistantError) throw assistantError;
+      // 3) AI javobini bazaga ai-chat Edge Function o'zi yozadi
+      // (klient 'assistant' rolini yozolmaydi — RLS policy).
+      // Shu sababli javobni faqat lokal holatga qo'shamiz.
+      const assistantMsg = {
+        id: `local-${Date.now()}`,
+        conversation_id: currentConversation.value.id,
+        role: "assistant",
+        content: result.message,
+        tokens_used: result.tokens_used || 0,
+        created_at: new Date().toISOString(),
+      };
       messages.value.push(assistantMsg);
 
       // Update conversation

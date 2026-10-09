@@ -268,24 +268,14 @@ export const useBizStore = defineStore("biz", () => {
       .from("subscription-receipts")
       .upload(path, file, { upsert: true, contentType: file.type });
     if (uploadError) throw uploadError;
-    // Trial hali tugamagan bo'lsa — chek saqlanadi, lekin markaz
-    // o'quvchilardan yashirinmaydi (status 'pending' bo'lib qolmaydi).
-    const sub = subscription.value;
-    const trialActive =
-      sub?.status === "trial" &&
-      sub.trial_ends_at &&
-      new Date(sub.trial_ends_at) > new Date();
-
-    const patch = trialActive
-      ? { receipt_url: path }
-      : { status: "pending", receipt_url: path };
-
-    const { data, error } = await supabase
-      .from("subscriptions")
-      .update(patch)
-      .eq("center_id", center.value.id)
-      .select(SUBSCRIPTION_FIELDS)
-      .single();
+    // Chek faqat submit_receipt() RPC orqali yuboriladi: egasining
+    // obuna ustunlarini (status, paid_until, plan) o'zgartirishi
+    // mumkin emas. Funksiya trial davom etyapsa 'trial' qoldiradi,
+    // 'active' obunani buzmaydi, qolgani 'pending' bo'ladi.
+    const { data, error } = await supabase.rpc("submit_receipt", {
+      p_center_id: center.value.id,
+      p_receipt_url: path,
+    });
     if (error) throw error;
     subscription.value = data;
     return data;

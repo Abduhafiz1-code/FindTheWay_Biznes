@@ -30,6 +30,7 @@ function statusOf(module) {
 // Sotib olingach aynan nima ochiladi — har bir modul uchun aniq va'da
 const TOOL_PROMISES = {
   crm: "O'quvchi qo'shish, qidirish, holatini o'zgartirish, qo'ng'iroq qilish, Excel eksport",
+  branches: "Filial qo'shish, filialga talaba/to'lov biriktirish, filiallar kesimida hisobot",
   schedule: "Guruh yaratish, o'qituvchi va vaqt belgilash, xonani ko'rsatish",
   finance: "To'lov kiritish, bugungi/oylik/jami tushumni ko'rish, Excel eksport",
   staff: "Xodim qo'shish, rol va maosh belgilash",

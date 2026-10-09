@@ -14,13 +14,14 @@ export const usePanelsStore = defineStore("panels", () => {
   const loading = ref(false);
   const lastError = ref("");
 
+  // isActive(panel_id) qidiradi — shuning uchun p.panel_id beriladi
   const activeCount = computed(
-    () => mine.value.filter((p) => isActive(p.id)).length,
+    () => mine.value.filter((p) => isActive(p.panel_id)).length,
   );
 
   /** Faol (to'langan va muddati tugamagan) panel */
   const activePanel = computed(
-    () => mine.value.find((p) => isActive(p.id)) ?? null,
+    () => mine.value.find((p) => isActive(p.panel_id)) ?? null,
   );
 
   async function loadCatalog() {

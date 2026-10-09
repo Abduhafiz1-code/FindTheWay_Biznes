@@ -1,10 +1,11 @@
-// Vercel cron endpoint — har soat chaqiriladi
+// Vercel cron endpoint — kuniga 1 marta chaqiriladi (vercel.json: 0 9 * * *)
 // POST /api/cron/subscriptions
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "";
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const CRON_SECRET = process.env.CRON_SECRET || "";
 
 interface EdgeFunctionResponse {
   success: boolean;
@@ -21,13 +22,20 @@ export default async function handler(
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Vercel cron automatically verifies requests, so we don't need additional auth
-  // But you can add extra protection if needed:
-  const vercelCronSecret = req.headers["x-vercel-cron"];
-  if (!vercelCronSecret) {
-    console.log(
-      "Warning: No Vercel cron header detected, but proceeding anyway",
-    );
+  // Vercel cron CRON_SECRET env o'rnatilganda har bir so'rovga
+  // avtomatik "Authorization: Bearer <CRON_SECRET>" sarlavhasini
+  // qo'shadi. Bu tekshiruvsiz istalgan odam eslatma yuborish
+  // jarayonini ishga tushirardi.
+  const authHeader = req.headers["authorization"] || "";
+  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    return res.status(500).json({
+      error:
+        "Server env sozlanmagan: VITE_SUPABASE_URL va SUPABASE_SERVICE_ROLE_KEY kerak",
+    });
   }
 
   try {

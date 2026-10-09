@@ -30,29 +30,55 @@ const tabs = computed(() =>
   ws.tools.map((key) => ({ key, ...(TOOLS[key] ?? {}) })).filter((t) => t.label),
 );
 
+// Bu panelda yopiq qolgan maydonlar — nima uchun katta panel qimmatroq
+const lockedTools = computed(() =>
+  Object.entries(TOOLS)
+    .filter(([key, cfg]) => !ws.tools.includes(key) && cfg.label)
+    .map(([key, cfg]) => ({ key, label: cfg.label, hint: cfg.hint })),
+);
+
 const current = computed(() => TOOLS[active.value] ?? null);
 const rows = computed(() =>
   current.value?.table ? ws.rowsOf(active.value) : [],
 );
 
-// Qidiruv — barcha maydonlar bo'yicha
+// Faqat ochiq maydonlar (requiresTool hisobga olinadi)
+const formFields = computed(() => ws.fieldsOf(active.value));
+const tableColumns = computed(() => ws.columnsOf(active.value));
+
+/** select maydon uchun variantlar (filiallar jadvaldan keladi) */
+function fieldOptions(field) {
+  return ws.optionsOf(field);
+}
+
+/** ref ustun qiymati (branch_id -> filial nomi) */
+function colValue(col, row) {
+  if (col.ref) {
+    const label = ws.refLabel(col, row[col.key]);
+    if (label !== null) return label;
+  }
+  return row[col.key];
+}
+
+// Qidiruv — ko'rinadigan ustunlar bo'yicha (filial nomi bilan ham)
 const filteredRows = computed(() => {
   const q = query.value.trim().toLowerCase();
   if (!q) return rows.value;
-  return rows.value.filter((row) =>
-    Object.values(row).some(
+  return rows.value.filter((row) => {
+    const values = tableColumns.value.map((c) => colValue(c, row));
+    return [...values, ...Object.values(row)].some(
       (v) =>
         v !== null &&
         v !== undefined &&
         String(v).toLowerCase().includes(q),
-    ),
-  );
+    );
+  });
 });
 
 function startEdit(row) {
   editingId.value = row.id;
   Object.keys(editingPatch).forEach((k) => delete editingPatch[k]);
-  (current.value?.columns ?? [])
+  tableColumns.value
     .filter((c) => c.editable)
     .forEach((c) => {
       editingPatch[c.key] = row[c.key];
@@ -95,11 +121,13 @@ function tgHref(phone, text) {
 function initForm() {
   Object.keys(form).forEach((k) => delete form[k]);
   message.value = "";
-  const fields = current.value?.fields ?? [];
+  const fields = formFields.value;
   fields.forEach((f) => {
     if (f.default !== undefined) {
       form[f.key] =
         typeof f.default === "function" ? f.default() : f.default;
+    } else if (f.optionsFrom) {
+      form[f.key] = "";
     } else if (f.type === "number") {
       form[f.key] = null;
     } else {
@@ -130,7 +158,7 @@ watch(
 
 async function submit() {
   message.value = "";
-  const fields = current.value?.fields ?? [];
+  const fields = formFields.value;
   for (const f of fields) {
     if (f.required) {
       const v = form[f.key];
@@ -142,7 +170,12 @@ async function submit() {
     }
   }
   try {
-    await ws.add(active.value, { ...form });
+    const payload = { ...form };
+    // Tanlanmagan filial -> NULL (faqat filial maydoni uchun)
+    formFields.value.forEach((f) => {
+      if (f.optionsFrom && payload[f.key] === "") payload[f.key] = null;
+    });
+    await ws.add(active.value, payload);
     messageType.value = "success";
     message.value = "Saqlandi.";
     initForm();
@@ -166,7 +199,7 @@ async function onDelete(row) {
 }
 
 function cellText(col, row) {
-  const value = row[col.key];
+  const value = colValue(col, row);
   if (value === null || value === undefined || value === "") return "—";
   if (col.type === "date")
     return new Date(value).toLocaleDateString("uz-UZ");
@@ -238,6 +271,9 @@ onMounted(async () => {
                 class="badge badge-ghost badge-sm">
                 {{ formatUntil(ws.activePanel.paid_until) }} gacha
               </span>
+              <span class="badge badge-outline badge-sm">
+                {{ ws.tools.length }} ta ish maydoni
+              </span>
             </div>
             <p class="mt-1 text-sm opacity-60">
               {{
@@ -285,6 +321,31 @@ onMounted(async () => {
       <p v-if="message" class="text-sm" :class="messageType === 'error' ? 'text-error' : 'text-success'">
         {{ message }}
       </p>
+
+      <!-- Nima yopiq? (darajalar farqini ko'rsatadi) -->
+      <div v-if="lockedTools.length" class="ftw-card p-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-bold uppercase tracking-widest opacity-45">
+            Bu panel {{ ws.tools.length }} ta maydon ochadi
+          </span>
+          <span class="text-xs opacity-45">·</span>          <span class="text-xs opacity-60">
+            Kattaroq panelda yana {{ lockedTools.length }} ta maydon ochiladi:
+          </span>
+        </div>
+        <div class="mt-2 flex flex-wrap gap-1.5">
+          <span
+            v-for="t in lockedTools"
+            :key="t.key"
+            class="badge badge-ghost badge-sm opacity-70">
+            <AppIcon name="lock" :size="11" class="mr-1" />
+            {{ t.label }}
+          </span>
+        </div>
+        <RouterLink to="/panellar" class="btn btn-outline btn-xs mt-3 rounded-xl">
+          Panellar bilan tanishing
+          <AppIcon name="chevronRight" :size="13" />
+        </RouterLink>
+      </div>
 
       <!-- ====== TABLE (CRUD) ====== -->
       <template v-if="current?.kind === 'table'">
@@ -343,11 +404,11 @@ onMounted(async () => {
 
           <!-- Form (read-only audit uchun form yo'q) -->
           <form
-            v-if="!current.readOnly && current.fields.length"
+            v-if="!current.readOnly && formFields.length"
             class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
             @submit.prevent="submit">
             <div
-              v-for="field in current.fields"
+              v-for="field in formFields"
               :key="field.key"
               :class="field.type === 'textarea' ? 'sm:col-span-2' : ''">
               <label class="label py-1">
@@ -360,9 +421,10 @@ onMounted(async () => {
                 v-if="field.type === 'select'"
                 v-model="form[field.key]"
                 class="select select-bordered w-full rounded-xl text-sm">
+                <option v-if="field.optionsFrom && !field.required" value="">— Tanlanmagan —</option>
                 <option
-                  v-for="opt in field.options"
-                  :key="opt.v"
+                  v-for="opt in fieldOptions(field)"
+                  :key="String(opt.v)"
                   :value="opt.v">
                   {{ opt.l }}
                 </option>
@@ -401,7 +463,7 @@ onMounted(async () => {
           <table class="table table-sm">
             <thead>
               <tr>
-                <th v-for="col in current.columns" :key="col.key">
+                <th v-for="col in tableColumns" :key="col.key">
                   {{ col.label }}
                 </th>
                 <th v-if="!current.readOnly" class="text-right">Amal</th>
@@ -410,7 +472,7 @@ onMounted(async () => {
             <tbody>
               <tr v-if="!filteredRows.length">
                 <td
-                  :colspan="current.columns.length + (current.readOnly ? 0 : 1)"
+                  :colspan="tableColumns.length + (current.readOnly ? 0 : 1)"
                   class="py-8 text-center text-sm opacity-50">
                   {{
                     rows.length
@@ -420,7 +482,7 @@ onMounted(async () => {
                 </td>
               </tr>
               <tr v-for="row in filteredRows" :key="row.id">
-                <td v-for="col in current.columns" :key="col.key">
+                <td v-for="col in tableColumns" :key="col.key">
                   <!-- Tahrirlanadigan holat (select) -->
                   <select
                     v-if="editingId === row.id && col.editable"
@@ -470,7 +532,7 @@ onMounted(async () => {
                   </template>
                   <template v-else>
                     <button
-                      v-if="(current.columns ?? []).some((c) => c.editable)"
+                      v-if="tableColumns.some((c) => c.editable)"
                       type="button"
                       class="btn btn-ghost btn-xs"
                       title="Tahrirlash"
@@ -540,6 +602,36 @@ onMounted(async () => {
             :value="ws.analytics.campaigns"
             icon="send"
             tone="secondary" />
+        </div>
+
+        <!-- Filiallar kesimida hisobot (faqat katta panellar) -->
+        <div v-if="ws.byBranch.length" class="ftw-card p-5">
+          <p class="text-xs font-bold uppercase tracking-widest opacity-45">
+            Filiallar kesimida hisobot
+          </p>
+          <div class="mt-3 overflow-x-auto">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Filial</th>
+                  <th class="text-right">Talabalar</th>
+                  <th class="text-right">To'lovlar</th>
+                  <th class="text-right">Tushum</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="b in ws.byBranch" :key="b.id || 'none'">
+                  <td class="font-bold">
+                    {{ b.name }}
+                    <span v-if="!b.active" class="badge badge-ghost badge-xs ml-1">nofaol</span>
+                  </td>
+                  <td class="text-right">{{ b.students }}</td>
+                  <td class="text-right">{{ b.payments }}</td>
+                  <td class="text-right">{{ formatMoney(b.total) }} so'm</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </template>
 

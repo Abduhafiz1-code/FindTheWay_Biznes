@@ -150,6 +150,19 @@ serve(async (req) => {
       conversation.centers || {},
     );
 
+    // AI javobini service_role o'zi yozadi — klient 'assistant'
+    // rolini yozolmaydi (RLS: faqat role='user'). Shu bilan
+    // kontekst zaharlash (poisoning) yo'li yopiladi.
+    const { error: saveError } = await supabase.from("ai_messages").insert({
+      conversation_id,
+      role: "assistant",
+      content: result.message,
+      tokens_used: result.tokens_used || 0,
+    });
+    if (saveError) {
+      console.error("Error saving assistant message:", saveError.message);
+    }
+
     return new Response(
       JSON.stringify({
         message: result.message,

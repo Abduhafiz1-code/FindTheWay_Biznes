@@ -17,6 +17,41 @@ function today() {
  * Har bir jadval center_id bilan: markazlar ma'lumoti aralashmaydi.
  */
 export const TOOLS = {
+  branches: {
+    label: "Filiallar",
+    icon: "building",
+    kind: "table",
+    table: "panel_branches",
+    hint: "Markazning filiallari: manzil, telefon va holati. Filialga bog'langan talabalar va to'lovlar hisobotda ajratiladi.",
+    fields: [
+      { key: "name", label: "Filial nomi", required: true },
+      { key: "address", label: "Manzil" },
+      { key: "phone", label: "Telefon", placeholder: "+998 90 123 45 67" },
+      {
+        key: "is_active",
+        label: "Holat",
+        type: "select",
+        default: true,
+        options: [
+          { v: true, l: "Faol" },
+          { v: false, l: "Nofaol" },
+        ],
+      },
+    ],
+    columns: [
+      { key: "name", label: "Filial" },
+      { key: "address", label: "Manzil" },
+      { key: "phone", label: "Telefon", phone: true },
+      {
+        key: "is_active",
+        label: "Holat",
+        badge: { true: "badge-success", false: "badge-ghost" },
+        badgeText: { true: "Faol", false: "Nofaol" },
+      },
+      { key: "created_at", label: "Sana", type: "date" },
+    ],
+  },
+
   crm: {
     label: "Talabalar bazasi",
     icon: "users",
@@ -27,6 +62,13 @@ export const TOOLS = {
       { key: "full_name", label: "Ism familiya", required: true },
       { key: "phone", label: "Telefon", placeholder: "+998 90 123 45 67" },
       { key: "course", label: "Kurs" },
+      {
+        key: "branch_id",
+        label: "Filial",
+        type: "select",
+        optionsFrom: "branches",
+        requiresTool: "branches",
+      },
       {
         key: "status",
         label: "Holat",
@@ -44,6 +86,12 @@ export const TOOLS = {
       { key: "full_name", label: "Ism" },
       { key: "phone", label: "Telefon", phone: true },
       { key: "course", label: "Kurs" },
+      {
+        key: "branch_id",
+        label: "Filial",
+        ref: "branches",
+        requiresTool: "branches",
+      },
       {
         key: "status",
         label: "Holat",
@@ -108,6 +156,13 @@ export const TOOLS = {
           { v: "boshqa", l: "Boshqa" },
         ],
       },
+      {
+        key: "branch_id",
+        label: "Filial",
+        type: "select",
+        optionsFrom: "branches",
+        requiresTool: "branches",
+      },
       { key: "paid_on", label: "Sana", type: "date", default: today },
       { key: "note", label: "Izoh", type: "textarea" },
     ],
@@ -119,6 +174,12 @@ export const TOOLS = {
         label: "Turi",
         badge: { oylik: "badge-success", kurs: "badge-info", boshqa: "badge-ghost" },
         badgeText: { oylik: "Oylik", kurs: "Kurs", boshqa: "Boshqa" },
+      },
+      {
+        key: "branch_id",
+        label: "Filial",
+        ref: "branches",
+        requiresTool: "branches",
       },
       { key: "paid_on", label: "Sana", type: "date" },
       { key: "note", label: "Izoh" },
@@ -149,6 +210,12 @@ export const TOOLS = {
       },
       { key: "phone", label: "Telefon", placeholder: "+998 90 123 45 67" },
       { key: "salary", label: "Maosh (so'm)", type: "number" },
+      {
+        key: "shift",
+        label: "Smena",
+        placeholder: "09:00–18:00",
+        requiresTool: "branches",
+      },
     ],
     columns: [
       { key: "name", label: "Ism" },
@@ -166,6 +233,7 @@ export const TOOLS = {
       },
       { key: "phone", label: "Telefon" },
       { key: "salary", label: "Maosh", type: "money" },
+      { key: "shift", label: "Smena", requiresTool: "branches" },
     ],
   },
 
@@ -345,6 +413,7 @@ export const TOOLS = {
 /** Do'mondagi ish maydonlari tartibi (tabs shu tartibda chiqadi) */
 export const TOOL_ORDER = [
   "crm",
+  "branches",
   "schedule",
   "finance",
   "staff",
@@ -391,11 +460,23 @@ export const usePanelToolsStore = defineStore("panelTools", () => {
     await Promise.all([panels.loadMine(), mods.loadMine()]);
 
     const set = new Set();
-    const panel = panels.activePanel;
-    if (panel) {
-      activePanel.value = panel;
-      (panel.panel_products?.tools ?? []).forEach((t) => set.add(t));
-      roles.value = panel.panel_products?.roles ?? [];
+    const roleSet = new Set();
+    // Markazda bir nechta faol panel bo'lishi mumkin —
+    // barchasining maydonlari birlashtiriladi (katta panel ustunlik qiladi).
+    const activeOnes = panels.mine.filter((p) => panels.isActive(p.panel_id));
+    activeOnes.forEach((p) => {
+      (p.panel_products?.tools ?? []).forEach((t) => set.add(t));
+      (p.panel_products?.roles ?? []).forEach((r) => roleSet.add(r));
+    });
+    if (activeOnes.length) {
+      // Sarlavhada eng katta (ko'p maydonli) panel ko'rsatiladi
+      activePanel.value = activeOnes.reduce((best, p) =>
+        (p.panel_products?.tools ?? []).length >
+        (best.panel_products?.tools ?? []).length
+          ? p
+          : best,
+      );
+      roles.value = [...roleSet];
     }
     mods.mine
       .filter((m) => mods.isActive(m.module_id))
@@ -405,6 +486,44 @@ export const usePanelToolsStore = defineStore("panelTools", () => {
 
     tools.value = TOOL_ORDER.filter((t) => set.has(t));
     await loadData();
+  }
+
+  /** Maydonning ochiq yoki yopiq ekanini tekshirish (requiresTool uchun) */
+  function toolOpen(toolKey) {
+    return tools.value.includes(toolKey);
+  }
+
+  /** Formadagi maydonlar — faqat ochiq bo'lganlari */
+  function fieldsOf(toolKey) {
+    return (TOOLS[toolKey]?.fields ?? []).filter(
+      (f) => !f.requiresTool || toolOpen(f.requiresTool),
+    );
+  }
+
+  /** Jadvaldagi ustunlar — faqat ochiq bo'lganlari */
+  function columnsOf(toolKey) {
+    return (TOOLS[toolKey]?.columns ?? []).filter(
+      (c) => !c.requiresTool || toolOpen(c.requiresTool),
+    );
+  }
+
+  /** select maydon uchun variantlar (optionsFrom bo'lsa jadvaldan) */
+  function optionsOf(field) {
+    if (field.optionsFrom) {
+      const rows = rowsOf(field.optionsFrom);
+      return rows
+        .filter((r) => r.is_active !== false)
+        .map((r) => ({ v: r.id, l: r.name || r.title || r.id }));
+    }
+    return field.options ?? [];
+  }
+
+  /** ref ustun uchun qiymat (branch_id -> filial nomi) */
+  function refLabel(column, value) {
+    if (!column.ref || !value) return null;
+    const rows = rowsOf(column.ref) ?? [];
+    const found = rows.find((r) => r.id === value);
+    return found ? found.name || found.title || String(value) : String(value);
   }
 
   /** Ochiq maydonlarning jadvallarini yuklash */
@@ -425,6 +544,8 @@ export const usePanelToolsStore = defineStore("panelTools", () => {
           "panel_results",
           "panel_attendance",
         ].forEach((x) => tables.add(x));
+        // Filiallar kesimida hisobot uchun
+        if (setHasBranches()) tables.add("panel_branches");
       }
     });
 
@@ -441,6 +562,10 @@ export const usePanelToolsStore = defineStore("panelTools", () => {
       }),
     );
     loading.value = false;
+  }
+
+  function setHasBranches() {
+    return tools.value.includes("branches");
   }
 
   function rowsOf(toolKey) {
@@ -536,12 +661,12 @@ export const usePanelToolsStore = defineStore("panelTools", () => {
     const rows = data[cfg.table] ?? [];
     if (!rows.length) return;
 
-    const cols = (cfg.columns ?? []).filter((c) => !c.phone);
+    const cols = columnsOf(toolKey).filter((c) => !c.phone);
     const header = cols.map((c) => c.label).join(";");
     const lines = rows.map((row) =>
       cols
         .map((c) => {
-          const v = row[c.key];
+          const v = c.ref ? refLabel(c, row[c.key]) : row[c.key];
           if (v === null || v === undefined) return "";
           const text = c.type === "date"
             ? new Date(v).toLocaleDateString("uz-UZ")
@@ -650,6 +775,41 @@ export const usePanelToolsStore = defineStore("panelTools", () => {
     };
   });
 
+  /** Filiallar kesimida hisobot (faqat filial maydoni ochiq bo'lsa) */
+  const byBranch = computed(() => {
+    if (!setHasBranches()) return [];
+    const branches = data["panel_branches"] ?? [];
+    const students = data["panel_students"] ?? [];
+    const payments = data["panel_payments"] ?? [];
+    const sum = (list) =>
+      list.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    const list = branches.map((b) => {
+      const mineStudents = students.filter((s) => s.branch_id === b.id);
+      const minePayments = payments.filter((p) => p.branch_id === b.id);
+      return {
+        id: b.id,
+        name: b.name,
+        active: b.is_active !== false,
+        students: mineStudents.length,
+        payments: minePayments.length,
+        total: sum(minePayments),
+      };
+    });
+    // Filialga bog'lanmaganlar ham ko'rinadi
+    const orphans = payments.filter((p) => !p.branch_id);
+    if (orphans.length) {
+      list.push({
+        id: "",
+        name: "Filialga bog'lanmagan",
+        active: true,
+        students: students.filter((s) => !s.branch_id).length,
+        payments: orphans.length,
+        total: sum(orphans),
+      });
+    }
+    return list;
+  });
+
   function reset() {
     tools.value = [];
     roles.value = [];
@@ -668,10 +828,16 @@ export const usePanelToolsStore = defineStore("panelTools", () => {
     lastError,
     hasAnything,
     analytics,
+    byBranch,
     financeSummary,
     load,
     loadData,
     rowsOf,
+    fieldsOf,
+    columnsOf,
+    optionsOf,
+    refLabel,
+    toolOpen,
     add,
     update,
     remove,

@@ -5,13 +5,16 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN") || "";
+const cronSecret = Deno.env.get("CRON_SECRET") || "";
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 interface SubscriptionAlert {
+  subscriptionId: string;
   centerId: string;
   centerName: string;
   telegramChatId: string;
+  expiresAt: string;
   daysLeft: number;
   isExpired: boolean;
 }
@@ -112,9 +115,11 @@ async function checkAndNotifySubscriptions() {
     const isExpired = daysLeft < 0;
 
     alerts.push({
+      subscriptionId: sub.id,
       centerId: sub.center_id,
       centerName: center.name || "Unknown Center",
       telegramChatId,
+      expiresAt,
       daysLeft,
       isExpired,
     });
@@ -131,6 +136,21 @@ async function sendNotifications() {
 
   let sentCount = 0;
   for (const alert of alerts) {
+    // Idempotentlik: bir xil eslatma (obuna + tur + davr) bir marta
+    // ketadi. Bu hem cron qayta ishga tushsa, hem ikkita scheduler
+    // (pg_cron + Vercel) bo'lib qolsa ikki marta yuborilishini to'sadi.
+    const reminderType = alert.isExpired ? "expired" : "5_days_left";
+    const periodEnd = new Date(alert.expiresAt).toISOString();
+
+    const { data: existing } = await supabase
+      .from("subscription_reminders")
+      .select("id")
+      .eq("subscription_id", alert.subscriptionId)
+      .eq("reminder_type", reminderType)
+      .eq("period_end", periodEnd)
+      .maybeSingle();
+    if (existing) continue;
+
     let message = "";
     if (alert.isExpired) {
       message = `🚨 <b>Obunangiz tugagan</b>\n\nMarkaz: ${alert.centerName}\n\n✅ To'lov qilish uchun FindTheWay hisobiga kiring.`;
@@ -139,7 +159,20 @@ async function sendNotifications() {
     }
 
     const sent = await sendTelegramMessage(alert.telegramChatId, message);
-    if (sent) sentCount++;
+    if (sent) {
+      sentCount++;
+      // Yuborilgani yozib qo'yiladi (unique indeks: uq_reminder_once)
+      await supabase
+        .from("subscription_reminders")
+        .upsert(
+          {
+            subscription_id: alert.subscriptionId,
+            reminder_type: reminderType,
+            period_end: periodEnd,
+          },
+          { onConflict: "subscription_id,reminder_type,period_end" },
+        );
+    }
   }
 
   console.log(`Sent ${sentCount}/${alerts.length} notifications`);
@@ -148,8 +181,11 @@ async function sendNotifications() {
 
 serve(async (req) => {
   const authHeader = req.headers.get("Authorization");
+  // Cron (Vercel yoki pg_cron) CRON_SECRET yoki service_role kalit
+  // bilan chaqirishi mumkin — boshqa hech kim butun bazani spam qila olmaydi.
   const isServiceRequest =
-    !!supabaseServiceKey && authHeader === `Bearer ${supabaseServiceKey}`;
+    (!!supabaseServiceKey && authHeader === `Bearer ${supabaseServiceKey}`) ||
+    (!!cronSecret && authHeader === `Bearer ${cronSecret}`);
   const body = await req.json().catch(() => ({}));
 
   // Cron is the only caller allowed to notify every center.
